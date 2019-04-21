@@ -15,7 +15,7 @@ class loadbalancer(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(loadbalancer, self).__init__(*args, **kwargs)
-        self.i = -1
+        self.i = 0
         self.mac_to_port = {}
         self.serverlist = []  # Creating a list of servers
         self.virtual_lb_ip = "192.168.7.100"  # Virtual Load Balancer IP
@@ -121,12 +121,12 @@ class loadbalancer(app_manager.RyuApp):
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
         if tcp_header.dst_port == 80:
-            self.i += 1
             index = self.i
             server_mac_selected = self.serverlist[index]['mac']
             server_ip_selected = self.serverlist[index]['ip']
             server_outport_selected = int(self.serverlist[index]['outport'])
             print("Server ", index)
+            self.i += 1
             if self.i == 3:
                 self.i = 0
 
