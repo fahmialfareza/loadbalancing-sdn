@@ -30,41 +30,41 @@ class loadbalancer(app_manager.RyuApp):
         self.serverlist.append(
             {'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "1"})
 
-    @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
-    def switch_features_handler(self, ev):
-        datapath = ev.msg.datapath
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
-        # self.add_flow(datapath, 0, match, actions)
+    # @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
+    # def switch_features_handler(self, ev):
+    #     datapath = ev.msg.datapath
+    #     ofproto = datapath.ofproto
+    #     parser = datapath.ofproto_parser
+    #     match = parser.OFPMatch()
+    #     actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
+    #                                       ofproto.OFPCML_NO_BUFFER)]
+    #     # self.add_flow(datapath, 0, match, actions)
+    #
+    #     actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
+    #
+    #     out = parser.OFPPacketOut(
+    #         datapath=datapath,
+    #         buffer_id=ev.msg.buffer_id,
+    #         in_port=match["in_port"],
+    #         actions=actions,
+    #         data=ev.data
+    #     )
+    #     datapath.send_msg(out)
 
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
-
-        out = parser.OFPPacketOut(
-            datapath=datapath,
-            buffer_id=ev.msg.buffer_id,
-            in_port=match["in_port"],
-            actions=actions,
-            data=ev.data
-        )
-        datapath.send_msg(out)
-
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
-        if buffer_id:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match,
-                                    instructions=inst)
-        else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
-        datapath.send_msg(mod)
+    # def add_flow(self, datapath, priority, match, actions, buffer_id=None):
+    #     ofproto = datapath.ofproto
+    #     parser = datapath.ofproto_parser
+    #
+    #     inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+    #                                          actions)]
+    #     if buffer_id:
+    #         mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
+    #                                 priority=priority, match=match,
+    #                                 instructions=inst)
+    #     else:
+    #         mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
+    #                                 match=match, instructions=inst)
+    #     datapath.send_msg(mod)
 
     # Function placed here, source MAC and IP passed from below now become the destination for the reply ppacket
     def function_for_arp_reply(self, dst_ip, dst_mac):
@@ -170,7 +170,7 @@ class loadbalancer(app_manager.RyuApp):
         #                              buffer_id=msg.buffer_id, cookie=cookie)
         # datapath.send_msg(flow_mod)
 
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
+        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
 
         out = parser.OFPPacketOut(
             datapath=datapath,
