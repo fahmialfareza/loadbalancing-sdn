@@ -58,9 +58,9 @@ class StatelessLB(app_manager.RyuApp):
         self.virtual_ip = "192.168.7.100"
         self.virtual_mac = "A6:63:DD:D7:C0:C8" # Pick something dummy and
 
-        self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:02", "outport": "1"})
-        self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:03", "outport": "1"})
-        self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:04", "outport": "1"})
+        self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:01", "outport": "1"})
+        self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:02", "outport": "1"})
+        self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:03", "outport": "1"})
 
         # self.learning_switch = kwargs['learning_switch']
         # self.learning_switch.add_exemption({'dl_type': ether.ETH_TYPE_LLDP})
@@ -79,11 +79,11 @@ class StatelessLB(app_manager.RyuApp):
         else:
             self.rewrite_ip_header = False
 
-    def set_virtual_ip(self, virtual_ip=None):
+    def set_virtual_ip(self, virtual_ip="192.168.7.100"):
         self.virtual_ip = virtual_ip
 
-    def set_server_pool(self, servers=None):
-        self.servers = servers
+    # def set_server_pool(self, servers=None):
+    #     self.servers = servers
 
     def formulate_arp_reply(self, dst_mac, dst_ip):
         if self.virtual_ip == None:
