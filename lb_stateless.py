@@ -122,22 +122,29 @@ class loadbalancer(app_manager.RyuApp):
 
         if tcp_header.dst_port == 80:
             self.i += 1
+            index = self.i
+            server_mac_selected = self.serverlist[index]['mac']
+            server_ip_selected = self.serverlist[index]['ip']
+            server_outport_selected = int(self.serverlist[index]['outport'])
+            print("Server ", index)
+            if self.i == 3:
+                self.i = 0
 
-        if self.i % 3 == 0:
-            server_mac_selected = self.serverlist[0]['mac']
-            server_ip_selected = self.serverlist[0]['ip']
-            server_outport_selected = int(self.serverlist[0]['outport'])
-            print("Server 0")
-        elif self.i % 3 == 1:
-            server_mac_selected = self.serverlist[1]['mac']
-            server_ip_selected = self.serverlist[1]['ip']
-            server_outport_selected = int(self.serverlist[1]['outport'])
-            print("Server 1")
-        else:
-            server_mac_selected = self.serverlist[2]['mac']
-            server_ip_selected = self.serverlist[2]['ip']
-            server_outport_selected = int(self.serverlist[2]['outport'])
-            print("Server 2")
+        # if self.i % 3 == 0:
+        #     server_mac_selected = self.serverlist[0]['mac']
+        #     server_ip_selected = self.serverlist[0]['ip']
+        #     server_outport_selected = int(self.serverlist[0]['outport'])
+        #     print("Server 0")
+        # elif self.i % 3 == 1:
+        #     server_mac_selected = self.serverlist[1]['mac']
+        #     server_ip_selected = self.serverlist[1]['ip']
+        #     server_outport_selected = int(self.serverlist[1]['outport'])
+        #     print("Server 1")
+        # else:
+        #     server_mac_selected = self.serverlist[2]['mac']
+        #     server_ip_selected = self.serverlist[2]['ip']
+        #     server_outport_selected = int(self.serverlist[2]['outport'])
+        #     print("Server 2")
 
         actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
                    parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
