@@ -30,7 +30,7 @@ from ryu.lib.packet import arp
 from ryu.ofproto import ether, inet
 from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
 from ryu.lib import dpid as dpid_lib
-from ryu.app.sdnhub_apps import learning_switch
+# from ryu.app.sdnhub_apps import learning_switch
 
 UINT32_MAX = 0xffffffff
 
@@ -62,9 +62,9 @@ class StatelessLB(app_manager.RyuApp):
         self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:03"})
         self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:04"})
 
-        self.learning_switch = kwargs['learning_switch']
-        self.learning_switch.add_exemption({'dl_type': ether.ETH_TYPE_LLDP})
-        self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
+        # self.learning_switch = kwargs['learning_switch']
+        # self.learning_switch.add_exemption({'dl_type': ether.ETH_TYPE_LLDP})
+        # self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
 
     def set_learning_switch(self, learning_switch):
         self.learning_switch = learning_switch
