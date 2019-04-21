@@ -38,7 +38,18 @@ class loadbalancer(app_manager.RyuApp):
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
+        # self.add_flow(datapath, 0, match, actions)
+
+        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
+
+        out = parser.OFPPacketOut(
+            datapath=datapath,
+            buffer_id=ev.msg.buffer_id,
+            in_port=match["in_port"],
+            actions=actions,
+            data=ev.data
+        )
+        datapath.send_msg(out)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
@@ -159,11 +170,11 @@ class loadbalancer(app_manager.RyuApp):
         #                              buffer_id=msg.buffer_id, cookie=cookie)
         # datapath.send_msg(flow_mod)
 
-        actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
+        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD, 1)]
 
-        out = datapath.ofproto_parser.OFPPacketOut(
+        out = parser.OFPPacketOut(
             datapath=datapath,
-            buffer_id = msg.buffer_id,
+            buffer_id=msg.buffer_id,
             in_port=in_port,
             actions=actions,
             data=data
