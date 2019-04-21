@@ -33,22 +33,12 @@ class loadbalancer(app_manager.RyuApp):
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
-        data = ev.msg.data
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
         # self.add_flow(datapath, 0, match, actions)
-
-        out = ofp_parser.OFPPacketOut(
-            datapath=datapath,
-            buffer_id=None,
-            in_port=match['in_port'],
-            actions=actions,
-            data=data)
-        # print actions
-        datapath.send_msg(out)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
@@ -94,6 +84,7 @@ class loadbalancer(app_manager.RyuApp):
 
         msg = ev.msg
         datapath = msg.datapath
+        data = msg.data
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
@@ -154,12 +145,20 @@ class loadbalancer(app_manager.RyuApp):
                    parser.OFPActionSetField(eth_dst=server_mac_selected),
                    parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                    parser.OFPActionOutput(server_outport_selected)]
-        inst = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
-                                     buffer_id=msg.buffer_id, cookie=cookie)
-        datapath.send_msg(flow_mod)
+        # inst = [parser.OFPInstructionActions(
+        #     ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        # cookie = random.randint(0, 0xffffffffffffffff)
+        # flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
+        #                              buffer_id=msg.buffer_id, cookie=cookie)
+        # datapath.send_msg(flow_mod)
+        out = ofp_parser.OFPPacketOut(
+            datapath=datapath,
+            buffer_id=None,
+            in_port=match["in_port"],
+            actions=actions,
+            data=data)
+        # print actions
+        dp.send_msg(out)
 
         # Reverse route from server
         match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
@@ -176,12 +175,3 @@ class loadbalancer(app_manager.RyuApp):
         flow_mod2 = parser.OFPFlowMod(
             datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
         datapath.send_msg(flow_mod2)
-
-        # out = ofp_parser.OFPPacketOut(
-        #     datapath=datapath,
-        #     buffer_id=None,
-        #     in_port=match['in_port'],
-        #     actions=actions,
-        #     data=data)
-        # # print actions
-        # dp.send_msg(out)
