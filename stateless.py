@@ -173,9 +173,9 @@ class StatelessLB(app_manager.RyuApp):
 
         # Round robin selection of servers
         index = self.server_index % total_servers
-        selected_server_ip = valid_servers[index]['ip']
-        selected_server_mac = valid_servers[index]['mac']
-        selected_server_outport = valid_servers[index]['outport']
+        selected_server_ip = self.servers[index]['ip']
+        selected_server_mac = self.servers[index]['mac']
+        selected_server_outport = self.servers[index]['outport']
         self.server_index += 1
         print "Selected server", selected_server_ip
 
