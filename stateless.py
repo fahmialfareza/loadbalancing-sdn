@@ -58,18 +58,18 @@ class StatelessLB(app_manager.RyuApp):
         self.virtual_ip = "192.168.7.5"
         self.virtual_mac = "A6:63:DD:D7:C0:C8" # Pick something dummy and
 
-        self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:02"})
-        self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:03"})
-        self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:04"})
+        self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:02", "outport": "1"})
+        self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:03", "outport": "1"})
+        self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:04", "outport": "1"})
 
         # self.learning_switch = kwargs['learning_switch']
         # self.learning_switch.add_exemption({'dl_type': ether.ETH_TYPE_LLDP})
         # self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
 
-    def set_learning_switch(self, learning_switch):
-        self.learning_switch = learning_switch
-        self.learning_switch.clear_exemption()
-        self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
+    # def set_learning_switch(self, learning_switch):
+    #     self.learning_switch = learning_switch
+    #     self.learning_switch.clear_exemption()
+    #     self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
 
     # Users can skip doing header rewriting by setting the virtual IP
     # as an alias IP on all the servers. This works well in single subnet
@@ -158,14 +158,14 @@ class StatelessLB(app_manager.RyuApp):
 
         tcphdr = pkt.get_protocols(tcp.tcp)[0]
 
-        valid_servers = []
-        for server in self.servers:
-            outport = self.learning_switch.get_attachment_port(dpid, server['mac'])
-            if outport != None:
-                server['outport'] = outport
-                valid_servers.append(server)
+        # valid_servers = []
+        # for server in self.servers:
+        #     outport = self.learning_switch.get_attachment_port(dpid, server['mac'])
+        #     if outport != None:
+        #         server['outport'] = outport
+        #         valid_servers.append(server)
 
-        total_servers = len(valid_servers)
+        total_servers = 3
 
         # If we there are no servers with location known, then skip
         if total_servers == 0:
