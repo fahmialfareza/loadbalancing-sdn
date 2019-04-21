@@ -55,7 +55,7 @@ class StatelessLB(app_manager.RyuApp):
         self.servers = []
 
         # self.virtual_ip = None
-        self.virtual_ip = "192.168.7.5"
+        self.virtual_ip = "192.168.7.100"
         self.virtual_mac = "A6:63:DD:D7:C0:C8" # Pick something dummy and
 
         self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:02", "outport": "1"})
