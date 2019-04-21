@@ -22,10 +22,13 @@ class loadbalancer(app_manager.RyuApp):
         self.virtual_lb_mac = "AB:BC:CD:EF:AB:BC"  # Virtual Load Balancer MAC Address
         # self.counter = 0  # Used to calculate mod in server selection below
 
-        self.serverlist.append({'ip': "192.168.7.1", 'mac': "00:19:21:68:00:01",
-                                "outport": "1"})  # Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
-        self.serverlist.append({'ip': "192.168.7.2", 'mac': "00:19:21:68:00:02", "outport": "2"})
-        self.serverlist.append({'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "3"})
+        # Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
+        self.serverlist.append(
+            {'ip': "192.168.7.1", 'mac': "00:19:21:68:00:01", "outport": "1"})
+        self.serverlist.append(
+            {'ip': "192.168.7.2", 'mac': "00:19:21:68:00:02", "outport": "1"})
+        self.serverlist.append(
+            {'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "1"})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -52,9 +55,11 @@ class loadbalancer(app_manager.RyuApp):
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
 
-    def function_for_arp_reply(self, dst_ip,dst_mac):  # Function placed here, source MAC and IP passed from below now become the destination for the reply ppacket
+    # Function placed here, source MAC and IP passed from below now become the destination for the reply ppacket
+    def function_for_arp_reply(self, dst_ip, dst_mac):
         arp_target_mac = dst_mac
-        src_ip = self.virtual_lb_ip  # Making the load balancers IP and MAC as source IP and MAC
+        # Making the load balancers IP and MAC as source IP and MAC
+        src_ip = self.virtual_lb_ip
         src_mac = self.virtual_lb_mac
 
         arp_opcode = 2  # ARP opcode is 2 for ARP reply
@@ -65,7 +70,8 @@ class loadbalancer(app_manager.RyuApp):
         len_of_ip = 4  # Indicates length of IP in bytes
 
         pkt = packet.Packet()
-        ether_frame = ethernet.ethernet(dst_mac, src_mac, ether_protocol)  # Dealing with only layer 2
+        ether_frame = ethernet.ethernet(
+            dst_mac, src_mac, ether_protocol)  # Dealing with only layer 2
         arp_reply_pkt = arp.arp(hardware_type, arp_protocol, len_of_mac, len_of_ip, arp_opcode, src_mac, src_ip,
                                 arp_target_mac, dst_ip)  # Building the ARP reply packet, dealing with layer 3
         pkt.add_protocol(ether_frame)
@@ -95,7 +101,7 @@ class loadbalancer(app_manager.RyuApp):
             arp_header = pkt.get_protocols(arp.arp)[0]
             # dan jika destination IP adalah virtual IP LB dan Opcode = 1 mengindikasikan ARP Request
             if arp_header.dst_ip == self.virtual_lb_ip and arp_header.opcode == arp.ARP_REQUEST:
-                #memanggil fungsi untuk membangun packet ARP reply dengan parameter MAC dan IP src
+                # memanggil fungsi untuk membangun packet ARP reply dengan parameter MAC dan IP src
                 reply_packet = self.function_for_arp_reply(arp_header.src_ip,
                                                            arp_header.src_mac)
                 actions = [parser.OFPActionOutput(in_port)]
@@ -138,7 +144,8 @@ class loadbalancer(app_manager.RyuApp):
                    parser.OFPActionSetField(eth_dst=server_mac_selected),
                    parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                    parser.OFPActionOutput(server_outport_selected)]
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        inst = [parser.OFPInstructionActions(
+            ofproto.OFPIT_APPLY_ACTIONS, actions)]
         cookie = random.randint(0, 0xffffffffffffffff)
         flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
                                      buffer_id=msg.buffer_id, cookie=cookie)
@@ -150,9 +157,12 @@ class loadbalancer(app_manager.RyuApp):
                                 ipv4_dst=self.virtual_lb_ip, tcp_src=tcp_header.dst_port, tcp_dst=tcp_header.src_port)
         actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
                    parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                   parser.OFPActionSetField(ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
+                   parser.OFPActionSetField(
+                       ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
                    parser.OFPActionOutput(in_port)]
-        inst2 = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        inst2 = [parser.OFPInstructionActions(
+            ofproto.OFPIT_APPLY_ACTIONS, actions)]
         cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod2 = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
+        flow_mod2 = parser.OFPFlowMod(
+            datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
         datapath.send_msg(flow_mod2)
