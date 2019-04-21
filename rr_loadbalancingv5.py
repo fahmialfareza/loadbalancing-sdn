@@ -42,9 +42,9 @@ class loadbalancer(app_manager.RyuApp):
         self.flowentry_temp = []
 
 	# Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
-        self.serverlist.append({'ip': "192.168.7.1", 'mac': "00:00:00:00:00:01","outport": "1", "used": "0"})
-        self.serverlist.append({'ip': "192.168.7.2", 'mac': "00:00:00:00:00:02", "outport": "1", "used": "0"})
-        self.serverlist.append({'ip': "192.168.7.3", 'mac': "00:00:00:00:00:03", "outport": "1", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.1", 'mac': "00:19:21:68:00:01","outport": "1", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.2", 'mac': "00:19:21:68:00:02", "outport": "1", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "1", "used": "0"})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
