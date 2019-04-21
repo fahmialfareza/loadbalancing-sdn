@@ -151,6 +151,7 @@ class loadbalancer(app_manager.RyuApp):
         # flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
         #                              buffer_id=msg.buffer_id, cookie=cookie)
         # datapath.send_msg(flow_mod)
+
         out = parser.OFPPacketOut(
             datapath=datapath,
             buffer_id=None,

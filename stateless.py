@@ -1,303 +1,224 @@
-# Copyright (C) 2017 Pratik Lotia.
-# Edited code of Nippon Telegraph and Telephone Corporation.
+# Copyright (C) 2014 SDN Hub
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# Licensed under the GNU GENERAL PUBLIC LICENSE, Version 3.
+# You may not use this file except in compliance with this License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#    http://www.gnu.org/licenses/gpl-3.0.txt
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
+import logging
+import json
+import random
+
+from ryu.lib import mac as mac_lib
+from ryu.lib import ip as ip_lib
 from ryu.base import app_manager
 from ryu.controller import ofp_event
-from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
+from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_3
+
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
-from ryu.lib.packet import ether_types
-import logging
-import random
 from ryu.lib.packet import ipv4
 from ryu.lib.packet import tcp
 from ryu.lib.packet import arp
-from ryu.lib.packet import icmp
-from ryu.app import simple_switch_13
+from ryu.ofproto import ether, inet
+from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
+from ryu.lib import dpid as dpid_lib
+from ryu.app.sdnhub_apps import learning_switch
 
-#Pingall requried before trying load balancing functionality
+UINT32_MAX = 0xffffffff
 
-class ShareIt(app_manager.RyuApp):
+################ Main ###################
 
-	OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+# The stateless server load balancer picks a different server for each
+# request. For making the assignment, it only uses the servers it
+# already knows the location of. The clients or the gateway sents along
+# a request for the Virtual IP of the load-balancer. The first switch
+# intercepting the request will rewrite the headers to match the actual
+# server picked. So all other switches will only have to do simple
+# L2 forwarding. It is possible to avoid IP header writing if alias IP
+# is set on the servers. The call skip_ip_header_rewriting() will handle
+# the appropriate flag setting.
 
-	def __init__(self, *args, **kwargs):
-        	super(ShareIt, self).__init__(*args, **kwargs)
-        	self.mac_to_port = {}
-		self.servers = []
-		self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:01", "server_port":"1"})
-		self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:02", "server_port":"1"})
-		self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:03", "server_port":"1"})
-		self.dummyIP = "192.168.7.100"
-		self.dummyMAC = "AB:BC:CD:EF:F1:12"
-		self.serverNumber = 0
-		self.logger.info("Initialized new Object instance data")
+class StatelessLB(app_manager.RyuApp):
 
-	@set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
-	def switch_features_handler(self, ev):
-		datapath = ev.msg.datapath
-		ofproto = datapath.ofproto
-		parser = datapath.ofproto_parser
+    def __init__(self, *args, **kwargs):
+        super(StatelessLB, self).__init__(*args, **kwargs)
+        self.rewrite_ip_header = True
+        self.server_index = 0
+        self.servers = []
 
-		# install table-miss flow entry
-		#
-		# We specify NO BUFFER to max_len of the output action due to
-		# OVS bug. At this moment, if we specify a lesser number, e.g.,
-		# 128, OVS will send Packet-In with invalid buffer_id and
-		# truncated packet data. In that case, we cannot output packets
-		# correctly.  The bug has been fixed in OVS v2.1.0.
-		match = parser.OFPMatch()
-		actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
-		self.add_flow(datapath, 0, match, actions)
-		self.logger.info("Set Config data for new Object Instance")
+        # self.virtual_ip = None
+        self.virtual_ip = "192.168.7.5"
+        self.virtual_mac = "A6:63:DD:D7:C0:C8" # Pick something dummy and
 
-	def add_flow(self, datapath, priority, match, actions, buffer_id=None):
-		self.logger.info("Now adding flow")
-		ofproto = datapath.ofproto
-        	parser = datapath.ofproto_parser
+        self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:02"})
+        self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:03"})
+        self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:04"})
 
-        	inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
-        	if buffer_id:
-			mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id, priority=priority, match=match, instructions=inst)
-        	else:
-            		mod = parser.OFPFlowMod(datapath=datapath, priority=priority, match=match, instructions=inst)
-        	datapath.send_msg(mod)
-		self.logger.info("Done adding flows")
+        self.learning_switch = kwargs['learning_switch']
+        self.learning_switch.add_exemption({'dl_type': ether.ETH_TYPE_LLDP})
+        self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
 
-	def handle_arp_for_server(self, dmac, dip):
-		self.logger.info("Handling ARP Reply for dummy Server IP")
-		#handle arp request for Dummy Server IP
-		#checked Wireshark for sample pcap for arp-reply
-		#build arp packet - format source web link included in reference
-		hrdw_type = 1 #Hardware Type: ethernet 10mb
-		protocol = 2048 #Layer 3 type: Internet Protocol
-		hrdw_add_len = 6 # length of mac
-		prot_add_len = 4 # lenght of IP
-		opcode = 2 # arp reply
-		sha = self.dummyMAC #sender address
-		spa = self.dummyIP #sender IP
-		tha = dmac #target MAC
-		tpa = dip #target IP
+    def set_learning_switch(self, learning_switch):
+        self.learning_switch = learning_switch
+        self.learning_switch.clear_exemption()
+        self.learning_switch.add_exemption({'dl_dst': self.virtual_mac})
 
-		ether_type = 2054 #ethertype ARP
+    # Users can skip doing header rewriting by setting the virtual IP
+    # as an alias IP on all the servers. This works well in single subnet
+    def set_rewrite_ip_flag(self, rewrite_ip):
+        if rewrite_ip == 1:
+            self.rewrite_ip_header = True
+        else:
+            self.rewrite_ip_header = False
 
-		pack = packet.Packet()
-		eth_frame = ethernet.ethernet(dmac, sha, ether_type)
-		arp_rpl_frame = arp.arp(hrdw_type, protocol, hrdw_add_len, prot_add_len, opcode, sha, spa, tha, tpa)
-		pack.add_protocol(eth_frame)
-		pack.add_protocol(arp_rpl_frame)
-		pack.serialize()
-		self.logger.info("Done handling ARP Reply")
-		return pack
+    def set_virtual_ip(self, virtual_ip=None):
+        self.virtual_ip = virtual_ip
 
+    def set_server_pool(self, servers=None):
+        self.servers = servers
 
-	@set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
-	def _packet_in_handler(self, ev):
-		self.logger.info("Entered main mode event handling")
-        	# If you hit this you might want to increase
-        	# the "miss_send_length" of your switch
-        	if ev.msg.msg_len < ev.msg.total_len:
-        		self.logger.debug("packet truncated: only %s of %s bytes",
-                              ev.msg.msg_len, ev.msg.total_len)
-		if self.serverNumber == 3:
-			self.serverNumber = 0
+    def formulate_arp_reply(self, dst_mac, dst_ip):
+        if self.virtual_ip == None:
+            return
 
-		self.logger.info("Will print data now")
-		#print event data
+        src_mac = self.virtual_mac
+        src_ip = self.virtual_ip
+        arp_opcode = arp.ARP_REPLY
+        arp_target_mac = dst_mac
 
-        	#fetch all details of the event
-		msg = ev.msg
-	       	datapath = msg.datapath
-       		ofproto = datapath.ofproto
-       		parser = datapath.ofproto_parser
-       		in_port = msg.match['in_port']
-		dpid = datapath.id
+        ether_proto = ether.ETH_TYPE_ARP
+        hwtype = 1
+        arp_proto = ether.ETH_TYPE_IP
+        hlen = 6
+        plen = 4
 
-       		pkt = packet.Packet(msg.data)
-       		eth = pkt.get_protocols(ethernet.ethernet)[0]
+        pkt = packet.Packet()
+        e = ethernet.ethernet(dst_mac, src_mac, ether_proto)
+        a = arp.arp(hwtype, arp_proto, hlen, plen, arp_opcode,
+                    src_mac, src_ip, arp_target_mac, dst_ip)
+        pkt.add_protocol(e)
+        pkt.add_protocol(a)
+        pkt.serialize()
+
+        return pkt
 
 
-        	dst = eth.dst
-       		src = eth.src
+    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
+    def packet_in_handler(self, ev):
+        if self.virtual_ip == None or self.servers == None:
+            return
 
-        	dpid = datapath.id
-        	self.mac_to_port.setdefault(dpid, {})
+        msg = ev.msg
+        datapath = msg.datapath
+        ofp = datapath.ofproto
+        ofp_parser = datapath.ofproto_parser
+        in_port = msg.match['in_port']
+        dpid = datapath.id
 
-        	self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+        pkt = packet.Packet(msg.data)
+        eth = pkt.get_protocols(ethernet.ethernet)[0]
 
-		# learn a mac address to avoid FLOOD next time.
-                self.mac_to_port[dpid][src] = in_port
-		self.logger.info("Ether Type: %s", eth.ethertype)
-		if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-			# ignore lldp packet
-			return
+        if eth.ethertype == ether.ETH_TYPE_ARP:
+            arp_hdr = pkt.get_protocols(arp.arp)[0]
 
-		if eth.ethertype == 2054:
-			arp_head = pkt.get_protocols(arp.arp)[0]
-			if arp_head.dst_ip == self.dummyIP:
-				#dmac and dIP for ARP Reply
-				a_r_ip = arp_head.src_ip
-				a_r_mac = arp_head.src_mac
-				arp_reply = self.handle_arp_for_server(a_r_mac, a_r_ip)
-				actions = [parser.OFPActionOutput(in_port)]
-				buffer_id = msg.buffer_id #id assigned by datapath - keep track of buffered packet
-				port_no = ofproto.OFPP_ANY #for any port number
-				data = arp_reply.data
-				out = parser.OFPPacketOut(datapath=datapath, buffer_id=buffer_id, in_port=port_no, actions=actions, data=data)
-				datapath.send_msg(out)
-				self.logger.info("ARP Request handled")
-				return
-			else:
-				dst = eth.dst
-                        	src = eth.src
+            if arp_hdr.dst_ip == self.virtual_ip and arp_hdr.opcode == arp.ARP_REQUEST:
 
-                        	dpid = datapath.id
-                        	self.mac_to_port.setdefault(dpid, {})
+                reply_pkt = self.formulate_arp_reply(arp_hdr.src_mac,
+                        arp_hdr.src_ip)
 
-                        	self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+                actions = [ofp_parser.OFPActionOutput(in_port)]
+                out = ofp_parser.OFPPacketOut(datapath=datapath,
+                           in_port=ofp.OFPP_ANY, data=reply_pkt.data,
+                           actions=actions, buffer_id = UINT32_MAX)
+                datapath.send_msg(out)
 
-                        	# learn a mac address to avoid FLOOD next time.
-                        	self.mac_to_port[dpid][src] = in_port
+            return
 
-                        	if dst in self.mac_to_port[dpid]:
-                                	out_port = self.mac_to_port[dpid][dst]
-                        	else:
-                                	out_port = ofproto.OFPP_FLOOD
+        # Only handle IPv4 traffic going forward
+        elif eth.ethertype != ether.ETH_TYPE_IP:
+            return
 
-                       		actions = [parser.OFPActionOutput(out_port)]
+        iphdr = pkt.get_protocols(ipv4.ipv4)[0]
 
-                        	# install a flow to avoid packet_in next time
-                        	if out_port != ofproto.OFPP_FLOOD:
-                                	match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-                                	# verify if we have a valid buffer_id, if yes avoid to send both
-                                	# flow_mod & packet_out
-                                	if msg.buffer_id != ofproto.OFP_NO_BUFFER:
-                                        	self.add_flow(datapath, 1, match, actions, msg.buffer_id)
-                                        	return
-                                	else:
-                                        	self.add_flow(datapath, 1, match, actions)
-                        	data = None
-                        	if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                                	data = msg.data
+        # Only handle traffic destined to virtual IP
+        if (iphdr.dst != self.virtual_ip):
+            return
 
-                        	out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                  	in_port=in_port, actions=actions, data=data)
-                        	datapath.send_msg(out)
-                       		return
+        # Only handle TCP traffic
+        if iphdr.proto != inet.IPPROTO_TCP:
+            return
 
+        tcphdr = pkt.get_protocols(tcp.tcp)[0]
 
-		try:
-			if pkt.get_protocols(icmp.icmp)[0]:
+        valid_servers = []
+        for server in self.servers:
+            outport = self.learning_switch.get_attachment_port(dpid, server['mac'])
+            if outport != None:
+                server['outport'] = outport
+                valid_servers.append(server)
 
-			#if ip_head.proto == inet.IPPROTO_ICMP:
-				dst = eth.dst
-		        	src = eth.src
+        total_servers = len(valid_servers)
 
-		        	dpid = datapath.id
-        			self.mac_to_port.setdefault(dpid, {})
+        # If we there are no servers with location known, then skip
+        if total_servers == 0:
+            return
 
-        			self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+        # Round robin selection of servers
+        index = self.server_index % total_servers
+        selected_server_ip = valid_servers[index]['ip']
+        selected_server_mac = valid_servers[index]['mac']
+        selected_server_outport = valid_servers[index]['outport']
+        self.server_index += 1
+        print "Selected server", selected_server_ip
 
-       				# learn a mac address to avoid FLOOD next time.
-        			self.mac_to_port[dpid][src] = in_port
+        ########### Setup route to server
+        match = ofp_parser.OFPMatch(in_port=in_port,
+                eth_type=eth.ethertype,  eth_src=eth.src,    eth_dst=eth.dst,
+                ip_proto=iphdr.proto,    ipv4_src=iphdr.src, ipv4_dst=iphdr.dst,
+                tcp_src=tcphdr.src_port, tcp_dst=tcphdr.dst_port)
 
-        			if dst in self.mac_to_port[dpid]:
-        				out_port = self.mac_to_port[dpid][dst]
-        			else:
-            				out_port = ofproto.OFPP_FLOOD
+        if self.rewrite_ip_header:
+            actions = [ofp_parser.OFPActionSetField(eth_dst=selected_server_mac),
+                       ofp_parser.OFPActionSetField(ipv4_dst=selected_server_ip),
+                       ofp_parser.OFPActionOutput(selected_server_outport) ]
+        else:
+            actions = [ofp_parser.OFPActionSetField(eth_dst=selected_server_mac),
+                       ofp_parser.OFPActionOutput(selected_server_outport) ]
 
-        			actions = [parser.OFPActionOutput(out_port)]
+        inst = [ofp_parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
 
-        			# install a flow to avoid packet_in next time
-        			if out_port != ofproto.OFPP_FLOOD:
-            				match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            				# verify if we have a valid buffer_id, if yes avoid to send both
-            				# flow_mod & packet_out
-            				if msg.buffer_id != ofproto.OFP_NO_BUFFER:
-                				self.add_flow(datapath, 1, match, actions, msg.buffer_id)
-                				return
-            				else:
-                				self.add_flow(datapath, 1, match, actions)
-        			data = None
-        			if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-            				data = msg.data
+        cookie = random.randint(0, 0xffffffffffffffff)
 
-        			out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                  in_port=in_port, actions=actions, data=data)
-        			datapath.send_msg(out)
-				return
+        mod = ofp_parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=10,
+                instructions=inst, buffer_id = msg.buffer_id, cookie=cookie)
+        datapath.send_msg(mod)
 
-		except:
-			pass
+        ########### Setup reverse route from server
+        match = ofp_parser.OFPMatch(in_port=selected_server_outport,
+                eth_type=eth.ethertype,  eth_src=selected_server_mac, eth_dst=eth.src,
+                ip_proto=iphdr.proto,    ipv4_src=selected_server_ip, ipv4_dst=iphdr.src,
+                tcp_src=tcphdr.dst_port, tcp_dst=tcphdr.src_port)
 
+        if self.rewrite_ip_header:
+            actions = ([ofp_parser.OFPActionSetField(eth_src=self.virtual_mac),
+                       ofp_parser.OFPActionSetField(ipv4_src=self.virtual_ip),
+                       ofp_parser.OFPActionOutput(in_port) ])
+        else:
+            actions = ([ofp_parser.OFPActionSetField(eth_src=self.virtual_mac),
+                       ofp_parser.OFPActionOutput(in_port) ])
 
+        inst = [ofp_parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
 
-		ip_head = pkt.get_protocols(ipv4.ipv4)[0]
-		tcp_head = pkt.get_protocols(tcp.tcp)[0]
+        cookie = random.randint(0, 0xffffffffffffffff)
 
-		# pingall before executing load balancer functionality
-		self.logger.info("Trying to map ports and servers")
-		for server in self.servers:
-			try:
-				if server['mac'] in self.mac_to_port[dpid]:
-					try:
-						server['server_port'] = self.mac_to_port[dpid][server['mac']]
-						self.logger.info("Port mapping successful for Server: %s ---check--- %s", server['ip'], server['server_port'])
-					except Exception as e:
-						self.logger.info("Internal Exception: %s", e)
-			except Exception as e:
-				self.logger.info("External Exception: %s", e)
-
-		self.logger.info("If there is no failure of mapping then we are good to go...")
-		#server choice for round robin style
-
-
-		choice_ip = self.servers[self.serverNumber]['ip']
-		choice_mac = self.servers[self.serverNumber]['mac']
-		choice_server_port = self.servers[self.serverNumber]['server_port']
-		self.logger.info("Server Choice details: \tIP is %s\tMAC is %s\tPort is %s", choice_ip, choice_mac, choice_server_port)
-
-
-
-		self.logger.info("Redirecting data request packet to one of the Servers")
-		#Redirecting data request packet to Server
-		match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst, ip_proto=ip_head.proto, ipv4_src=ip_head.src, ipv4_dst=ip_head.dst, tcp_src=tcp_head.src_port, tcp_dst=tcp_head.dst_port)
-		self.logger.info("Data request being sent to Server: IP: %s, MAC: %s", choice_ip, choice_mac)
-		actions = [parser.OFPActionSetField(eth_dst=choice_mac), parser.OFPActionSetField(ipv4_dst=choice_ip), parser.OFPActionOutput(choice_server_port)]
-		instruction1 = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-		cookie = random.randint(0, 0xffffffffffffffff)
-		flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=5, instructions=instruction1, buffer_id = msg.buffer_id, cookie=cookie)
-		datapath.send_msg(flow_mod)
-
-		self.logger.info("Redirection done...1")
-		self.logger.info("Redirecting data reply packet to the host")
-		#Redirecting data reply to respecitve Host
-		match = parser.OFPMatch(in_port=choice_server_port, eth_type=eth.ethertype, eth_src=choice_mac, eth_dst=eth.src, ip_proto=ip_head.proto, ipv4_src=choice_ip, ipv4_dst=ip_head.src, tcp_src=tcp_head.dst_port, tcp_dst=tcp_head.src_port)
-		self.logger.info("Data reply coming from Server: IP: %s, MAC: %s", choice_ip, choice_mac)
-		actions = [parser.OFPActionSetField(eth_src=self.dummyMAC), parser.OFPActionSetField(ipv4_src=self.dummyIP), parser.OFPActionOutput(in_port) ]
-
-		instruction2 = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-		cookie = random.randint(0, 0xffffffffffffffff)
-
-        	flow_mod2 = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=5, instructions=instruction2, cookie=cookie)
-        	datapath.send_msg(flow_mod2)
-
-		self.serverNumber = self.serverNumber + 1
-		self.logger.info("Redirecting done...2")
+        mod = ofp_parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=10,
+                instructions=inst, cookie=cookie)
+        datapath.send_msg(mod)
