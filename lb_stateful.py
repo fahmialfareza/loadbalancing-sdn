@@ -33,12 +33,22 @@ class loadbalancer(app_manager.RyuApp):
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
+        data = ev.msg.data
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
         # self.add_flow(datapath, 0, match, actions)
+
+        out = ofp_parser.OFPPacketOut(
+            datapath=datapath,
+            buffer_id=None,
+            in_port=match['in_port'],
+            actions=actions,
+            data=data)
+        # print actions
+        datapath.send_msg(out)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
@@ -166,3 +176,12 @@ class loadbalancer(app_manager.RyuApp):
         flow_mod2 = parser.OFPFlowMod(
             datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
         datapath.send_msg(flow_mod2)
+
+        # out = ofp_parser.OFPPacketOut(
+        #     datapath=datapath,
+        #     buffer_id=None,
+        #     in_port=match['in_port'],
+        #     actions=actions,
+        #     data=data)
+        # # print actions
+        # dp.send_msg(out)
