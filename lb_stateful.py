@@ -158,11 +158,11 @@ class loadbalancer(app_manager.RyuApp):
         #     server_outport_selected = int(self.serverlist[2]['outport'])
         #     print("Server 2")
 
-        # actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-        #            parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-        #            parser.OFPActionSetField(eth_dst=server_mac_selected),
-        #            parser.OFPActionSetField(ipv4_dst=server_ip_selected),
-        #            parser.OFPActionOutput(server_outport_selected)]
+        actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
+                   parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
+                   parser.OFPActionSetField(eth_dst=server_mac_selected),
+                   parser.OFPActionSetField(ipv4_dst=server_ip_selected),
+                   parser.OFPActionOutput(server_outport_selected)]
         # inst = [parser.OFPInstructionActions(
         #     ofproto.OFPIT_APPLY_ACTIONS, actions)]
         # cookie = random.randint(0, 0xffffffffffffffff)
@@ -170,7 +170,7 @@ class loadbalancer(app_manager.RyuApp):
         #                              buffer_id=msg.buffer_id, cookie=cookie)
         # datapath.send_msg(flow_mod)
 
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+        # actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
 
         out = parser.OFPPacketOut(
             datapath=datapath,
