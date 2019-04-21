@@ -125,49 +125,35 @@ class loadbalancer(app_manager.RyuApp):
             server_mac_selected = self.serverlist[index]['mac']
             server_ip_selected = self.serverlist[index]['ip']
             server_outport_selected = int(self.serverlist[index]['outport'])
-            print("Server " + index)
+            print("Server ", index)
             self.i += 1
+            if self.i == 3
+                self.i = 0
 
-        # if self.i % 3 == 0:
-        #     server_mac_selected = self.serverlist[0]['mac']
-        #     server_ip_selected = self.serverlist[0]['ip']
-        #     server_outport_selected = int(self.serverlist[0]['outport'])
-        #     print("Server 0")
-        # elif self.i % 3 == 1:
-        #     server_mac_selected = self.serverlist[1]['mac']
-        #     server_ip_selected = self.serverlist[1]['ip']
-        #     server_outport_selected = int(self.serverlist[1]['outport'])
-        #     print("Server 1")
-        # else:
-        #     server_mac_selected = self.serverlist[2]['mac']
-        #     server_ip_selected = self.serverlist[2]['ip']
-        #     server_outport_selected = int(self.serverlist[2]['outport'])
-        #     print("Server 2")
+            actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
+                       parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
+                       parser.OFPActionSetField(eth_dst=server_mac_selected),
+                       parser.OFPActionSetField(ipv4_dst=server_ip_selected),
+                       parser.OFPActionOutput(server_outport_selected)]
+            inst = [parser.OFPInstructionActions(
+                ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            cookie = random.randint(0, 0xffffffffffffffff)
+            flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
+                                         buffer_id=msg.buffer_id, cookie=cookie)
+            datapath.send_msg(flow_mod)
 
-        actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                   parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                   parser.OFPActionSetField(eth_dst=server_mac_selected),
-                   parser.OFPActionSetField(ipv4_dst=server_ip_selected),
-                   parser.OFPActionOutput(server_outport_selected)]
-        inst = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
-                                     buffer_id=msg.buffer_id, cookie=cookie)
-        datapath.send_msg(flow_mod)
-
-        # Reverse route from server
-        match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
-                                eth_dst=self.virtual_lb_mac, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
-                                ipv4_dst=self.virtual_lb_ip, tcp_src=tcp_header.dst_port, tcp_dst=tcp_header.src_port)
-        actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                   parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                   parser.OFPActionSetField(
-                       ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
-                   parser.OFPActionOutput(in_port)]
-        inst2 = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod2 = parser.OFPFlowMod(
-            datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
-        datapath.send_msg(flow_mod2)
+            # Reverse route from server
+            match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
+                                    eth_dst=self.virtual_lb_mac, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
+                                    ipv4_dst=self.virtual_lb_ip, tcp_src=tcp_header.dst_port, tcp_dst=tcp_header.src_port)
+            actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
+                       parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
+                       parser.OFPActionSetField(
+                           ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
+                       parser.OFPActionOutput(in_port)]
+            inst2 = [parser.OFPInstructionActions(
+                ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            cookie = random.randint(0, 0xffffffffffffffff)
+            flow_mod2 = parser.OFPFlowMod(
+                datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
+            datapath.send_msg(flow_mod2)
