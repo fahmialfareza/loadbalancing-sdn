@@ -40,10 +40,10 @@ class ShareIt(app_manager.RyuApp):
         	super(ShareIt, self).__init__(*args, **kwargs)
         	self.mac_to_port = {}
 		self.servers = []
-		self.servers.append({'ip':"10.0.0.1", 'mac':"00:00:00:00:00:01"})
-		self.servers.append({'ip':"10.0.0.2", 'mac':"00:00:00:00:00:02"})
-		self.servers.append({'ip':"10.0.0.3", 'mac':"00:00:00:00:00:03"})
-		self.dummyIP = "10.0.0.100"
+		self.servers.append({'ip':"192.168.7.1", 'mac':"00:19:21:68:00:01", 'server_port':"1"})
+		self.servers.append({'ip':"192.168.7.2", 'mac':"00:19:21:68:00:02", 'server_port':"1"})
+		self.servers.append({'ip':"192.168.7.3", 'mac':"00:19:21:68:00:03", 'server_port':"1"})
+		self.dummyIP = "192.168.7.100"
 		self.dummyMAC = "AB:BC:CD:EF:F1:12"
 		self.serverNumber = 0
 		self.logger.info("Initialized new Object instance data")

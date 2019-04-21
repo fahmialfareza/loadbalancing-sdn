@@ -22,7 +22,7 @@ class loadbalancer(app_manager.RyuApp):
         super(loadbalancer, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
         self.serverlist = []  # Creating a list of servers
-        self.virtual_lb_ip = "10.0.0.100"  # Virtual Load Balancer IP
+        self.virtual_lb_ip = "192.168.7.100"  # Virtual Load Balancer IP
         self.virtual_lb_mac = "AB:BC:CD:EF:AB:BC"  # Virtual Load Balancer MAC Address
         # self.counter = 0  # Used to calculate mod in server selection below
         self.flow_monitor = 0
@@ -40,11 +40,11 @@ class loadbalancer(app_manager.RyuApp):
         self.clongest_dur = 0xffffffffffffffff
 
         self.flowentry_temp = []
-        
+
 	# Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
-        self.serverlist.append({'ip': "10.0.0.1", 'mac': "00:00:00:00:00:01","outport": "1", "used": "0"})  
-        self.serverlist.append({'ip': "10.0.0.2", 'mac': "00:00:00:00:00:02", "outport": "2", "used": "0"})
-        self.serverlist.append({'ip': "10.0.0.3", 'mac': "00:00:00:00:00:03", "outport": "3", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.1", 'mac': "00:00:00:00:00:01","outport": "1", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.2", 'mac': "00:00:00:00:00:02", "outport": "1", "used": "0"})
+        self.serverlist.append({'ip': "192.168.7.3", 'mac': "00:00:00:00:00:03", "outport": "1", "used": "0"})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -68,7 +68,7 @@ class loadbalancer(app_manager.RyuApp):
             mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
-    
+
     def delete_flow(self, ev):
         msg = ev.msg
         datapath = msg.datapath
@@ -81,7 +81,7 @@ class loadbalancer(app_manager.RyuApp):
         idle_timeout = hard_timeout = 0
         priority = 32768
         buffer_id = ofproto.OFP_NO_BUFFER
-        
+
         req = parser.OFPFlowMod(datapath, cookie, cookie_mask,
                                     table_id, ofproto.OFPFC_DELETE,
                                     idle_timeout, hard_timeout,
@@ -89,10 +89,10 @@ class loadbalancer(app_manager.RyuApp):
                                     ofproto.OFPP_ANY, ofproto.OFPG_ANY,
                                     ofproto.OFPFF_SEND_FLOW_REM,)
         datapath.send_msg(req)
-        print("flow dengan cookie " + hex(self.cookie_temp) + " telah dihapus")    
+        print("flow dengan cookie " + hex(self.cookie_temp) + " telah dihapus")
 
     # Function placed here, source MAC and IP passed from below now become the destination for the reply packet
-    def function_for_arp_reply(self, dst_ip,dst_mac):  
+    def function_for_arp_reply(self, dst_ip,dst_mac):
         arp_target_mac = dst_mac
         src_ip = self.virtual_lb_ip  # Making the load balancers IP and MAC as source IP and MAC
         src_mac = self.virtual_lb_mac
@@ -142,7 +142,7 @@ class loadbalancer(app_manager.RyuApp):
                 packet_out = parser.OFPPacketOut(datapath=datapath, in_port=ofproto.OFPP_ANY, data=reply_packet.data, actions=actions, buffer_id=0xffffffff)
                 datapath.send_msg(packet_out)
 
-            return        
+            return
         ip_header = pkt.get_protocols(ipv4.ipv4)[0]
         # print("IP_Header", ip_header)
         tcp_header = pkt.get_protocols(tcp.tcp)[0]
@@ -153,7 +153,7 @@ class loadbalancer(app_manager.RyuApp):
                                 ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
-#        if ip_header.src == "10.0.0.4" or ip_header.src == "10.0.0.5":
+#        if ip_header.src == "192.168.7.4" or ip_header.src == "10.0.0.5":
 #            server_mac_selected = self.serverlist[0]['mac']
 #            server_ip_selected = self.serverlist[0]['ip']
 #            server_outport_selected = int(self.serverlist[0]['outport'])
@@ -165,7 +165,7 @@ class loadbalancer(app_manager.RyuApp):
 #            server_mac_selected = self.serverlist[2]['mac']
 #            server_ip_selected = self.serverlist[2]['ip']
 #            server_outport_selected = int(self.serverlist[2]['outport'])
-        
+
         for server_selected in self.serverlist:
             if server_selected['used'] is "0":
                 server_selected['used'] = "1"
@@ -185,7 +185,7 @@ class loadbalancer(app_manager.RyuApp):
                    parser.OFPActionOutput(server_outport_selected)]
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
         cookie = random.randint(0, 0xffffffffffffffff)
-        
+
         # tambahkan timeout dinamis
         if self.flow_monitor > (0.7 * 100):
             self.xtime -= 1
@@ -216,7 +216,7 @@ class loadbalancer(app_manager.RyuApp):
         flow_mod2 = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=60, instructions=inst2, cookie=cookie)
         datapath.send_msg(flow_mod2)
         # print("timeouts saat ini reverse from server : " + str(self.xtime))
-    
+
     #Method untuk melakukan monitoring flow table setiap x detik
     @set_ev_cls(ofp_event.EventOFPStateChange,
                 [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -247,12 +247,12 @@ class loadbalancer(app_manager.RyuApp):
 
         req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)
         datapath.send_msg(req)
-    
+
     @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
     def _flow_stats_reply_handler(self, ev):
         body = ev.msg.body
         ctemp_idx = 0
-        
+
         self.flow_monitor = len(body)
         print("Flow Entry saat ini : " + str(self.flow_monitor))
         self.logger.info('  Cookie     '
@@ -261,7 +261,7 @@ class loadbalancer(app_manager.RyuApp):
         self.logger.info('---------------- '
                          '----------------- '
                          '----------  ----------')
-        
+
         flow_table = ev.msg.to_jsondict()
         for i in range (self.flow_monitor):
             # print(i)
@@ -270,7 +270,7 @@ class loadbalancer(app_manager.RyuApp):
             packet_count = (flow_table["OFPFlowStatsReply"]["body"][i]["OFPFlowStats"]["packet_count"])
             byte_count = (flow_table["OFPFlowStatsReply"]["body"][i]["OFPFlowStats"]["byte_count"])
             # print('{:016x} {:8d} {:15d} {:12d}'.format(cookie, duration, packet_count, byte_count))
-            
+
             # print("longest duration : " + str(longest_duration))
 
             if not cookie in self.ctemp:
@@ -284,7 +284,7 @@ class loadbalancer(app_manager.RyuApp):
                 ctemp_idx = self.ctemp.index(cookie)
 
                 if byte_count > self.btemp[ctemp_idx] and packet_count > self.ptemp[ctemp_idx]:
-                  
+
                     self.ctemp[ctemp_idx] = cookie
                     self.btemp[ctemp_idx] = byte_count
                     self.dtemp[ctemp_idx] = duration
@@ -299,12 +299,12 @@ class loadbalancer(app_manager.RyuApp):
                         # call function delete_flow(cookie)
                         self.delete_flow(ev)
 
-                    else:    
+                    else:
                         print('{:016x} {:8d} {:15d} {:12d}'.format(cookie, duration, packet_count, byte_count))
             else:
                 # print("Flow Entry saat ini NORMAL : " + str(flow_monitor))
                 print('{:016x} {:8d} {:15d} {:12d}'.format(cookie, duration, packet_count, byte_count))
-            
+
             # function to check longest duration
             if self.longest_duration < self.dtemp[ctemp_idx]:
                 self.longest_duration = self.dtemp[ctemp_idx]
