@@ -121,10 +121,11 @@ class loadbalancer(app_manager.RyuApp):
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
         if tcp_header.dst_port == 80:
-            server_mac_selected = self.serverlist[self.i]['mac']
-            server_ip_selected = self.serverlist[self.i]['ip']
-            server_outport_selected = int(self.serverlist[self.i]['outport'])
-            print("Server " + self.i)
+            index = self.i
+            server_mac_selected = self.serverlist[index]['mac']
+            server_ip_selected = self.serverlist[index]['ip']
+            server_outport_selected = int(self.serverlist[index]['outport'])
+            print("Server " + index)
             self.i += 1
 
         # if self.i % 3 == 0:
