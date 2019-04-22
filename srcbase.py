@@ -1,8 +1,9 @@
 from ryu.base import app_manager
 from ryu.controller import ofp_event
-from ryu.controller.handler import MAIN_DISPATCHER, set_ev_cls,CONFIG_DISPATCHER
+from ryu.controller.handler import MAIN_DISPATCHER, set_ev_cls, CONFIG_DISPATCHER
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet, ethernet
+
 
 class hub(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -20,19 +21,21 @@ class hub(app_manager.RyuApp):
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
         # memanggil fungsi untuk mengenerate flowmod (fungsi 	#add_flow
-        self.add_flow(datapath, 0, match, actions)
+        # self.add_flow(datapath, 0, match, actions)
     #
+
     def add_flow(self, datapath, priority, match, actions):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        inst = [parser.OFPInstructionActions(
+            ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         mod = parser.OFPFlowMod(
-        datapath=datapath,
-        priority=priority,
-        match=match,
-        instructions=inst)
+            datapath=datapath,
+            priority=priority,
+            match=match,
+            instructions=inst)
 
         datapath.send_msg(mod)
 
@@ -52,7 +55,7 @@ class hub(app_manager.RyuApp):
             output = 1
         else:
             output = 2
-        # match = ofp_parser.OFPMatch(in_port=inport,eth_src=src)
+        #match = ofp_parser.OFPMatch(in_port=inport,eth_src=src)
         actions = [ofp_parser.OFPActionOutput(output)]
 
         # self.add_flow(dp,10,match,actions)
