@@ -157,7 +157,7 @@ class loadbalancer(app_manager.RyuApp):
             actions=actions,
             data=data)
         # print actions
-        dp.send_msg(out)
+        datapath.send_msg(out)
 
         # Reverse route from server
         match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
