@@ -120,10 +120,6 @@ class loadbalancer(app_manager.RyuApp):
                                 ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
-        server_mac_selected = ""
-        server_ip_selected = ""
-        server_outport_selected = ""
-
         if tcp_header.dst_port == 80:
             index = self.i
             server_mac_selected = self.serverlist[index]['mac']
@@ -149,7 +145,7 @@ class loadbalancer(app_manager.RyuApp):
         # datapath.send_msg(flow_mod)
 
         # Stateful
-        out = ofp_parser.OFPPacketOut(
+        out = parser.OFPPacketOut(
             datapath=datapath,
             buffer_id=0xffffffff,
             in_port=in_port,
