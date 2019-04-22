@@ -27,10 +27,10 @@ class hub(app_manager.RyuApp):
         in_port = msg.inport
         # match = parser.OFPMatch(in_port=in_port)
 
-        if src == "fa:51:8c:42:5d:ff":
-            output = 2
+        if src == "00:19:21:68:00:04":
+            output = 1
         else:
-            output=1
+            output = 1
 
         actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
 
