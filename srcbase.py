@@ -55,10 +55,10 @@ class hub(app_manager.RyuApp):
             output = 1
         else:
             output = 2
-        #match = ofp_parser.OFPMatch(in_port=inport,eth_src=src)
+        match = ofp_parser.OFPMatch(in_port=inport,eth_src=src)
         actions = [ofp_parser.OFPActionOutput(output)]
 
-        # self.add_flow(dp,10,match,actions)
+        self.add_flow(dp,10,match,actions)
 
         out = ofp_parser.OFPPacketOut(
             datapath=dp,
