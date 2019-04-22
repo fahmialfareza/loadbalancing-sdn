@@ -21,7 +21,7 @@ class hub(app_manager.RyuApp):
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
         # memanggil fungsi untuk mengenerate flowmod (fungsi 	#add_flow
-        # self.add_flow(datapath, 0, match, actions)
+        self.add_flow(datapath, 0, match, actions)
     #
 
     def add_flow(self, datapath, priority, match, actions):
@@ -56,7 +56,7 @@ class hub(app_manager.RyuApp):
         else:
             output = 2
         #match = ofp_parser.OFPMatch(in_port=inport,eth_src=src)
-        actions = [ofp_parser.OFPActionOutput(output)]
+        actions = [ofp_parser.OFPActionOutput(ofp.OFPP_FLOOD, output)]
 
         # self.add_flow(dp,10,match,actions)
 
