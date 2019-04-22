@@ -84,6 +84,7 @@ class loadbalancer(app_manager.RyuApp):
 
         msg = ev.msg
         datapath = msg.datapath
+        data = msg.data
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
@@ -119,6 +120,10 @@ class loadbalancer(app_manager.RyuApp):
         match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
                                 ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
+
+        server_mac_selected = ""
+        server_ip_selected = ""
+        server_outport_selected = ""
 
         if tcp_header.dst_port == 80:
             index = self.i
