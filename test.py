@@ -19,13 +19,13 @@ class hub(app_manager.RyuApp):
         parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
         # (2)
-        pkt= packet.Packet(data)
+        pkt = packet.Packet(data)
         eth = pkt.get_protocol(ethernet.ethernet)
         src = eth.src
-        # dst = eth.dst
+        dst = eth.dst
 
         in_port = msg.inport
-        # match = parser.OFPMatch(in_port=in_port)
+        match = parser.OFPMatch(in_port=in_port)
 
         if src == "00:19:21:68:00:04":
             output = 1
