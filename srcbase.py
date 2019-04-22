@@ -62,7 +62,6 @@ class hub(app_manager.RyuApp):
 
         out = ofp_parser.OFPPacketOut(
             datapath=dp,
-            buffer_id=None,
             in_port=inport,
             actions=actions,
             data=data)
