@@ -121,19 +121,19 @@ class loadbalancer(app_manager.RyuApp):
                                 ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
                                 tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
-        # server_mac_selected = ""
-        # server_ip_selected = ""
-        # server_outport_selected = ""
+        server_mac_selected = "00:19:21:68:00:01"
+        server_ip_selected = "192.168.7.1"
+        server_outport_selected = "1"
 
-        # if tcp_header.dst_port == 80:
-        index = self.i
-        server_mac_selected = self.serverlist[index]['mac']
-        server_ip_selected = self.serverlist[index]['ip']
-        server_outport_selected = int(self.serverlist[index]['outport'])
-        print("Server ", index)
-        self.i += 1
-        if self.i == 3:
-            self.i = 0
+        if tcp_header.dst_port == 80:
+            index = self.i
+            server_mac_selected = self.serverlist[index]['mac']
+            server_ip_selected = self.serverlist[index]['ip']
+            server_outport_selected = int(self.serverlist[index]['outport'])
+            print("Server ", index)
+            self.i += 1
+            if self.i == 3:
+                self.i = 0
 
         actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
                    parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
