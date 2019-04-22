@@ -123,7 +123,7 @@ class loadbalancer(app_manager.RyuApp):
 
         server_mac_selected = "00:19:21:68:00:01"
         server_ip_selected = "192.168.7.1"
-        server_outport_selected = "1"
+        server_outport_selected = 1
 
         if tcp_header.dst_port == 80:
             index = self.i
