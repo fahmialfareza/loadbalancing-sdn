@@ -135,12 +135,24 @@ class loadbalancer(app_manager.RyuApp):
                    parser.OFPActionSetField(eth_dst=server_mac_selected),
                    parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                    parser.OFPActionOutput(server_outport_selected)]
-        inst = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
-                                     buffer_id=msg.buffer_id, cookie=cookie)
-        datapath.send_msg(flow_mod)
+
+        # Stateless
+        # inst = [parser.OFPInstructionActions(
+        #     ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        # cookie = random.randint(0, 0xffffffffffffffff)
+        # flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
+        #                              buffer_id=msg.buffer_id, cookie=cookie)
+        # datapath.send_msg(flow_mod)
+
+        # Stateful
+        out = ofp_parser.OFPPacketOut(
+            datapath=datapath,
+            buffer_id=0xffffffff,
+            in_port=in_port,
+            actions=actions,
+            data=data)
+        # print actions
+        dp.send_msg(out)
 
         # Reverse route from server
         match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
