@@ -148,7 +148,7 @@ class loadbalancer(app_manager.RyuApp):
                 datapath.send_msg(packet_out)
             else:
                 packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
-                                                 actions=actions)
+                                                 actions=actions, buffer_id=None)
                 datapath.send_msg(packet_out)
 
             # Reverse route from server
