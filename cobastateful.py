@@ -142,9 +142,7 @@ class loadbalancer(app_manager.RyuApp):
             #                              buffer_id=msg.buffer_id, cookie=cookie)
             # datapath.send_msg(flow_mod)
 
-            data = msg.data
-
-            packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=data,
+            packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
                                              actions=actions, buffer_id=0xffffffff)
             datapath.send_msg(packet_out)
 
