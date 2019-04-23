@@ -142,11 +142,14 @@ class loadbalancer(app_manager.RyuApp):
             #                              buffer_id=msg.buffer_id, cookie=cookie)
             # datapath.send_msg(flow_mod)
 
-            data = msg.data
-
-            packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=data,
-                                             actions=actions, buffer_id=msg.buffer_id)
-            datapath.send_msg(packet_out)
+            if msg.buffer_id != ofproto.OFP_NO_BUFFER:
+                packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
+                                                 actions=actions, buffer_id=msg.buffer_id)
+                datapath.send_msg(packet_out)
+            else:
+                packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
+                                                 actions=actions)
+                datapath.send_msg(packet_out)
 
             # Reverse route from server
             match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
