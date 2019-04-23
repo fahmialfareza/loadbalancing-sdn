@@ -18,17 +18,17 @@ class loadbalancer(app_manager.RyuApp):
         self.i = 0
         self.mac_to_port = {}
         self.serverlist = []  # Creating a list of servers
-        self.virtual_lb_ip = "192.168.7.100"  # Virtual Load Balancer IP
+        self.virtual_lb_ip = "10.0.0.2"  # Virtual Load Balancer IP
         self.virtual_lb_mac = "AB:BC:CD:EF:AB:BC"  # Virtual Load Balancer MAC Address
         # self.counter = 0  # Used to calculate mod in server selection below
 
         # Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
         self.serverlist.append(
-            {'ip': "192.168.7.1", 'mac': "00:19:21:68:00:01", "outport": "1"})
+            {'ip': "10.0.0.2", 'mac': "00:00:00:00:00:01", "outport": "2"})
         self.serverlist.append(
-            {'ip': "192.168.7.2", 'mac': "00:19:21:68:00:02", "outport": "1"})
+            {'ip': "10.0.0.3", 'mac': "00:00:00:00:00:02", "outport": "3"})
         self.serverlist.append(
-            {'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "1"})
+            {'ip': "10.0.0.4", 'mac': "00:00:00:00:00:03", "outport": "4"})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):

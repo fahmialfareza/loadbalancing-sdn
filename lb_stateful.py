@@ -1,176 +1,135 @@
-import random
+import logging
+import struct
+
 from ryu.base import app_manager
 from ryu.controller import ofp_event
-from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
+from ryu.controller.handler import CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_3, ether
-from ryu.lib.packet import packet, ethernet, ether_types, arp, tcp, ipv4
+import ryu.ofproto.ofproto_v1_3 as ofproto
+import ryu.ofproto.ofproto_v1_3_parser as ofparser
+import ryu.ofproto.openstate_v1_0 as osproto
+import ryu.ofproto.openstate_v1_0_parser as osparser
 
+LOG = logging.getLogger('app.openstate.forwarding_consistency_1_to_many')
 
-# from ryu.app.sdnhub_apps import learning_switch
+SWITCH_PORTS = 4
+LOG.info("OpenState Forwarding Consistency sample app initialized")
+LOG.info("Supporting MAX %d ports per switch" % SWITCH_PORTS)
 
-
-class loadbalancer(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+class OpenStateLoadBalancing(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
-        super(loadbalancer, self).__init__(*args, **kwargs)
-        self.i = 0
-        self.mac_to_port = {}
-        self.serverlist = []  # Creating a list of servers
-        self.virtual_lb_ip = "192.168.7.100"  # Virtual Load Balancer IP
-        self.virtual_lb_mac = "AB:BC:CD:EF:AB:BC"  # Virtual Load Balancer MAC Address
-        # self.counter = 0  # Used to calculate mod in server selection below
 
-        # Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
-        self.serverlist.append(
-            {'ip': "192.168.7.1", 'mac': "00:19:21:68:00:01", "outport": "1"})
-        self.serverlist.append(
-            {'ip': "192.168.7.2", 'mac': "00:19:21:68:00:02", "outport": "1"})
-        self.serverlist.append(
-            {'ip': "192.168.7.3", 'mac': "00:19:21:68:00:03", "outport": "1"})
+        super(OpenStateLoadBalancing, self).__init__(*args, **kwargs)
+        self.mac_to_port = {}
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
-        datapath = ev.msg.datapath
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
-
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
-        if buffer_id:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match,
-                                    instructions=inst)
-        else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
-        datapath.send_msg(mod)
-
-    # Function placed here, source MAC and IP passed from below now become the destination for the reply ppacket
-    def function_for_arp_reply(self, dst_ip, dst_mac):
-        arp_target_mac = dst_mac
-        # Making the load balancers IP and MAC as source IP and MAC
-        src_ip = self.virtual_lb_ip
-        src_mac = self.virtual_lb_mac
-
-        arp_opcode = 2  # ARP opcode is 2 for ARP reply
-        hardware_type = 1  # 1 indicates Ethernet ie 10Mb
-        arp_protocol = 2048  # 2048 means IPv4 packet
-        ether_protocol = 2054  # 2054 indicates ARP protocol
-        len_of_mac = 6  # Indicates length of MAC in bytes
-        len_of_ip = 4  # Indicates length of IP in bytes
-
-        pkt = packet.Packet()
-        ether_frame = ethernet.ethernet(
-            dst_mac, src_mac, ether_protocol)  # Dealing with only layer 2
-        arp_reply_pkt = arp.arp(hardware_type, arp_protocol, len_of_mac, len_of_ip, arp_opcode, src_mac, src_ip,
-                                arp_target_mac, dst_ip)  # Building the ARP reply packet, dealing with layer 3
-        pkt.add_protocol(ether_frame)
-        pkt.add_protocol(arp_reply_pkt)
-        pkt.serialize()
-        return pkt
-
-    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
-    def _packet_in_handler(self, ev):
 
         msg = ev.msg
         datapath = msg.datapath
-        data = msg.data
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-        in_port = msg.match['in_port']
-        dpid = datapath.id
-        # print("Debugging purpose dpid", dpid)
 
-        pkt = packet.Packet(msg.data)
-        eth = pkt.get_protocols(ethernet.ethernet)[0]
+        LOG.info("Configuring switch %d..." % datapath.id)
 
-        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-            # ignore lldp packet
-            return
-        # Jika ethernet frame type = 2054 mengindikasikan ARP packet..
-        if eth.ethertype == ether.ETH_TYPE_ARP:
-            arp_header = pkt.get_protocols(arp.arp)[0]
-            # dan jika destination IP adalah virtual IP LB dan Opcode = 1 mengindikasikan ARP Request
-            if arp_header.dst_ip == self.virtual_lb_ip and arp_header.opcode == arp.ARP_REQUEST:
-                # memanggil fungsi untuk membangun packet ARP reply dengan parameter MAC dan IP src
-                reply_packet = self.function_for_arp_reply(arp_header.src_ip,
-                                                           arp_header.src_mac)
-                actions = [parser.OFPActionOutput(in_port)]
-                packet_out = parser.OFPPacketOut(datapath=datapath, in_port=ofproto.OFPP_ANY, data=reply_packet.data,
-                                                 actions=actions, buffer_id=0xffffffff)
-                datapath.send_msg(packet_out)
+        """ Set table 0 as stateful """
+        req = osparser.OFPExpMsgConfigureStatefulTable(datapath=datapath,
+                                                    table_id=0,
+                                                    stateful=1)
+        datapath.send_msg(req)
 
-            return
-        ip_header = pkt.get_protocols(ipv4.ipv4)[0]
-        # print("IP_Header", ip_header)
-        tcp_header = pkt.get_protocols(tcp.tcp)[0]
-        # print("TCP_Header", tcp_header)
+        """ Set lookup extractor = {ip_src, ip_dst, tcp_src, tcp_dst} """
+        req = osparser.OFPExpMsgKeyExtract(datapath=datapath,
+                                                command=osproto.OFPSC_EXP_SET_L_EXTRACTOR,
+                                                fields=[ofproto.OXM_OF_IPV4_SRC,ofproto.OXM_OF_IPV4_DST,ofproto.OXM_OF_TCP_SRC,ofproto.OXM_OF_TCP_DST],
+                                                table_id=0)
+        datapath.send_msg(req)
 
-        # Route to server
-        match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
-                                ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
-                                tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
+        """ Set update extractor = {ip_src, ip_dst, tcp_src, tcp_dst} (same as lookup) """
+        req = osparser.OFPExpMsgKeyExtract(datapath=datapath,
+                                                command=osproto.OFPSC_EXP_SET_U_EXTRACTOR,
+                                                fields=[ofproto.OXM_OF_IPV4_SRC,ofproto.OXM_OF_IPV4_DST,ofproto.OXM_OF_TCP_SRC,ofproto.OXM_OF_TCP_DST],
+                                                table_id=0)
+        datapath.send_msg(req)
 
-        server_mac_selected = ""
-        server_ip_selected = ""
-        server_outport_selected = 1
+        """ Group table setup """
+        buckets = []
+        # Action Bucket: <PWD port_i , SetState(i-1)
+        for port in range(2,SWITCH_PORTS+1):
+            max_len = 2000
+            dest_ip=self.int_to_ip_str(port)
+            dest_eth=self.int_to_mac_str(port)
+            dest_tcp=(port)*100
+            actions = [ osparser.OFPExpActionSetState(state=port, table_id=0),
+                        ofparser.OFPActionSetField(ipv4_dst=dest_ip),
+                        ofparser.OFPActionSetField(eth_dst=dest_eth),
+                        ofparser.OFPActionSetField(tcp_dst=dest_tcp),
+                        ofparser.OFPActionOutput(port=port, max_len=max_len) ]
 
-        if tcp_header.dst_port == 80:
-            index = self.i
-            server_mac_selected = self.serverlist[index]['mac']
-            server_ip_selected = self.serverlist[index]['ip']
-            server_outport_selected = int(self.serverlist[index]['outport'])
-            print("Server ", index)
-            self.i += 1
-            if self.i == 3:
-                self.i = 0
+            buckets.append(ofparser.OFPBucket(weight=100,
+                                                watch_port=ofproto.OFPP_ANY,
+                                                watch_group=ofproto.OFPG_ANY,
+                                                actions=actions))
 
-        actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                   parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                   parser.OFPActionSetField(eth_dst=server_mac_selected),
-                   parser.OFPActionSetField(ipv4_dst=server_ip_selected),
-                   parser.OFPActionOutput(server_outport_selected)]
+        req = ofparser.OFPGroupMod(datapath=datapath,
+                                     command=ofproto.OFPGC_ADD,
+                                     type_=ofproto.OFPGT_SELECT,
+                                     group_id=1,
+                                     buckets=buckets)
+        datapath.send_msg(req)
 
-        # Stateless
-        # inst = [parser.OFPInstructionActions(
-        #     ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        # cookie = random.randint(0, 0xffffffffffffffff)
-        # flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=7, instructions=inst,
-        #                              buffer_id=msg.buffer_id, cookie=cookie)
-        # datapath.send_msg(flow_mod)
 
-        # Stateful
-        out = parser.OFPPacketOut(
-            datapath=datapath,
-            buffer_id=0xffffffff,
-            in_port=in_port,
-            actions=actions,
-            data=data)
-        # print actions
-        datapath.send_msg(out)
 
-        # Reverse route from server
-        match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
-                                eth_dst=self.virtual_lb_mac, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
-                                ipv4_dst=self.virtual_lb_ip, tcp_src=tcp_header.dst_port, tcp_dst=tcp_header.src_port)
-        actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                   parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                   parser.OFPActionSetField(
-                       ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
-                   parser.OFPActionOutput(in_port)]
-        inst2 = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        cookie = random.randint(0, 0xffffffffffffffff)
-        flow_mod2 = parser.OFPFlowMod(
-            datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
-        datapath.send_msg(flow_mod2)
+        """ ARP packets flooding """
+        match = ofparser.OFPMatch(eth_type=0x0806)
+        actions = [ofparser.OFPActionOutput(port=ofproto.OFPP_FLOOD)]
+        self.add_flow(datapath=datapath, table_id=0, priority=100,
+                        match=match, actions=actions)
+
+        """ Reverse path flow """
+        for in_port in range(2, SWITCH_PORTS + 1):
+            src_ip=self.int_to_ip_str(in_port)
+            src_eth=self.int_to_mac_str(in_port)
+            src_tcp=in_port*100
+            # we need to match an IPv4 (0x800) TCP (6) packet to do SetField()
+            match = ofparser.OFPMatch(in_port=in_port, eth_type=0x800, ip_proto=6, ipv4_src=src_ip,eth_src=src_eth,tcp_src=src_tcp)
+            actions = [ofparser.OFPActionSetField(ipv4_src="10.0.0.2"),
+                       ofparser.OFPActionSetField(eth_src="00:00:00:00:00:02"),
+                       ofparser.OFPActionSetField(tcp_src=80),
+                       ofparser.OFPActionOutput(port=1, max_len=0)]
+            self.add_flow(datapath=datapath, table_id=0, priority=100,
+                    match=match, actions=actions)
+
+        """ Forwarding consistency rules"""
+        match = ofparser.OFPMatch(in_port=1, state=0, eth_type=0x800, ip_proto=6)
+        actions = [ofparser.OFPActionGroup(1)]
+        self.add_flow(datapath=datapath, table_id=0, priority=100,
+                match=match, actions=actions)
+
+        for state in range(2,SWITCH_PORTS+1):
+            dest_ip=self.int_to_ip_str(state)
+            dest_eth=self.int_to_mac_str(state)
+            dest_tcp=(state)*100
+            match = ofparser.OFPMatch(in_port=1, state=state, eth_type=0x800, ip_proto=6)
+            actions = [ ofparser.OFPActionSetField(ipv4_dst=dest_ip),
+                        ofparser.OFPActionSetField(eth_dst=dest_eth),
+                        ofparser.OFPActionSetField(tcp_dst=dest_tcp),
+                        ofparser.OFPActionOutput(port=state, max_len=0)]
+            self.add_flow(datapath=datapath, table_id=0, priority=100,
+                    match=match, actions=actions)
+
+    def add_flow(self, datapath, table_id, priority, match, actions):
+        inst = [ofparser.OFPInstructionActions(
+                ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        mod = ofparser.OFPFlowMod(datapath=datapath, table_id=table_id,
+                                priority=priority, match=match, instructions=inst)
+        datapath.send_msg(mod)
+
+    # returns "xx:xx:xx:xx:xx:xx"
+    def int_to_mac_str(self, host_number):
+        mac_str = "{0:0{1}x}".format(int(host_number),12) # converts to hex with zero pad to 48bit
+        return ':'.join(mac_str[i:i+2] for i in range(0, len(mac_str), 2)) # adds ':'
+
+    # returns "10.x.x.x"
+    def int_to_ip_str(self, host_number):
+        ip = (10<<24) + int(host_number)
+        return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
