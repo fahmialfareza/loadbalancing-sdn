@@ -18,7 +18,7 @@ class loadbalancer(app_manager.RyuApp):
         self.i = 0
         self.mac_to_port = {}
         self.serverlist = []  # Creating a list of servers
-        self.virtual_lb_ip = "10.0.0.2"  # Virtual Load Balancer IP
+        self.virtual_lb_ip = "10.0.0.100"  # Virtual Load Balancer IP
         self.virtual_lb_mac = "AB:BC:CD:EF:AB:BC"  # Virtual Load Balancer MAC Address
         # self.counter = 0  # Used to calculate mod in server selection below
 
