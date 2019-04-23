@@ -142,14 +142,15 @@ class loadbalancer(app_manager.RyuApp):
             #                              buffer_id=msg.buffer_id, cookie=cookie)
             # datapath.send_msg(flow_mod)
 
+            packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
+                                             actions=actions, buffer_id=0xffffffff)
+            datapath.send_msg(packet_out)
+
             if msg.buffer_id != ofproto.OFP_NO_BUFFER:
-                packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
-                                                 actions=actions, buffer_id=msg.buffer_id)
-                datapath.send_msg(packet_out)
+                self.add_flow(datapath, 1, match, actions, msg.buffer_id)
+                return
             else:
-                packet_out = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
-                                                 actions=actions, buffer_id=None)
-                datapath.send_msg(packet_out)
+                self.add_flow(datapath, 1, match, actions)
 
             # Reverse route from server
             match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
@@ -160,9 +161,12 @@ class loadbalancer(app_manager.RyuApp):
                        parser.OFPActionSetField(
                            ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
                        parser.OFPActionOutput(in_port)]
-            inst2 = [parser.OFPInstructionActions(
-                ofproto.OFPIT_APPLY_ACTIONS, actions)]
-            cookie = random.randint(0, 0xffffffffffffffff)
-            flow_mod2 = parser.OFPFlowMod(
-                datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
-            datapath.send_msg(flow_mod2)
+            # inst2 = [parser.OFPInstructionActions(
+            #     ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            # cookie = random.randint(0, 0xffffffffffffffff)
+            # flow_mod2 = parser.OFPFlowMod(
+            #     datapath=datapath, match=match, idle_timeout=7, instructions=inst2, cookie=cookie)
+            # datapath.send_msg(flow_mod2)
+            packet_out2 = parser.OFPPacketOut(datapath=datapath, in_port=match["in_port"], data=msg.data,
+                                             actions=actions, buffer_id=0xffffffff)
+            datapath.send_msg(packet_out2)
