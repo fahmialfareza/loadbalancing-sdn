@@ -93,7 +93,7 @@ class OpenStateLoadBalancing(app_manager.RyuApp):
             # we need to match an IPv4 (0x800) TCP (6) packet to do SetField()
             match = ofparser.OFPMatch(in_port=in_port, eth_type=0x800, ip_proto=6, ipv4_src=src_ip,eth_src=src_eth,tcp_src=src_tcp)
             actions = [ofparser.OFPActionSetField(ipv4_src="10.0.0.100"),
-                       ofparser.OFPActionSetField(eth_src="00:00:00:00:00:100"),
+                       ofparser.OFPActionSetField(eth_src="00:00:00:00:00:10"),
                        ofparser.OFPActionSetField(tcp_src=80),
                        ofparser.OFPActionOutput(port=1, max_len=0)]
             self.add_flow(datapath=datapath, table_id=0, priority=100,
