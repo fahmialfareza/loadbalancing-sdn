@@ -1,0 +1,23 @@
+Stateless
+$ sudo mn -c
+$ ryu-manager ~/loadbalancing/lb_stateless.py
+$ sudo mn --topo single,4 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+mininet > xterm h1 h2 h3 h4 c0 s1
+h2# python -m SimpleHTTPServer 80
+h3# python -m SimpleHTTPServer 80
+h4# python -m SimpleHTTPServer 80
+c0# python ~/loadbalancing/utilization.py
+s1# python ~/loadbalancing/utilization.py
+h1# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+
+Stateful
+$ sudo mn -c
+$ ryu-manager ~/loadbalancing/lb_stateful_switch.py
+$ sudo mn --topo single,4 --mac --switch user --controller remote
+mininet > xterm h1 h2 h3 h4 c0 s1
+h2# python -m SimpleHTTPServer 200
+h3# python -m SimpleHTTPServer 300
+h4# python -m SimpleHTTPServer 400
+c0# python ~/loadbalancing/utilization.py
+s1# python ~/loadbalancing/utilization.py
+h1# httperf --server=10.0.0.2 --uri=/ --num-conns=400 --rate=20
