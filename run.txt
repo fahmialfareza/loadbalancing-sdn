@@ -1,3 +1,16 @@
+Stateful
+$ sudo mn -c
+$ ryu-manager ~/loadbalancing/lb_stateful_switch.py
+$ sudo mn --topo single,4 --mac --switch user --controller remote
+mininet > xterm h1 h2 h3 h4 c0 s1
+h2# python -m SimpleHTTPServer 200
+h3# python -m SimpleHTTPServer 300
+h4# python -m SimpleHTTPServer 400
+c0# python ~/loadbalancing/utilization.py
+s1# python ~/loadbalancing/utilization.py
+h1# httperf --server=10.0.0.2 --uri=/ --num-conns=400 --rate=20
+
+
 Stateless
 $ sudo mn -c
 $ ryu-manager ~/loadbalancing/lb_stateless.py
@@ -10,14 +23,14 @@ c0# python ~/loadbalancing/utilization.py
 s1# python ~/loadbalancing/utilization.py
 h1# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
 
-Stateful
-$ sudo mn -c
-$ ryu-manager ~/loadbalancing/lb_stateful_switch.py
-$ sudo mn --topo single,4 --mac --switch user --controller remote
-mininet > xterm h1 h2 h3 h4 c0 s1
-h2# python -m SimpleHTTPServer 200
-h3# python -m SimpleHTTPServer 300
-h4# python -m SimpleHTTPServer 400
-c0# python ~/loadbalancing/utilization.py
-s1# python ~/loadbalancing/utilization.py
-h1# httperf --server=10.0.0.2 --uri=/ --num-conns=400 --rate=20
+
+issue = ulimit
+stateful disimpan dimana -> di simpan pada stateful tabel pada switch
+teknik stateful dan stateless -> stateful menyimpan cache, sedangkan stateless tidak menyimpan
+pendefinisian statefel dan stateful secara detail
+stateful -> cookies ->> dasar
+stateful lb vs stateless lb 
+
+PR!
+1. Konfirmasi stateless dan stateful server load balancing
+2. Pahami stateless stateful SDN
