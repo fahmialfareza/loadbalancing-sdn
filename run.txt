@@ -24,12 +24,11 @@ s1# python ~/loadbalancing/utilization.py
 h1# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
 
 
-issue = ulimit
 stateful disimpan dimana -> di simpan pada stateful tabel pada switch
 teknik stateful dan stateless -> stateful menyimpan cache, sedangkan stateless tidak menyimpan
 pendefinisian statefel dan stateful secara detail
 stateful -> cookies ->> dasar
-stateful lb vs stateless lb 
+stateful lb vs stateless lb
 
 PR!
 1. Konfirmasi stateless dan stateful server load balancing
