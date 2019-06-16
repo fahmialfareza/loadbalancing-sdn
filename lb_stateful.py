@@ -130,7 +130,9 @@ class loadbalancer(app_manager.RyuApp):
             match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
                                     ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst)
 
-            actions = [parser.OFPActionSetField(eth_dst=server_mac_selected),
+            actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
+                       parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
+                       parser.OFPActionSetField(eth_dst=server_mac_selected),
                        parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                        parser.OFPActionOutput(server_outport_selected)]
             inst = [parser.OFPInstructionActions(
@@ -146,6 +148,8 @@ class loadbalancer(app_manager.RyuApp):
                                     ipv4_dst=self.virtual_lb_ip)
             actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
                        parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
+                       parser.OFPActionSetField(
+                           ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
                        parser.OFPActionOutput(in_port)]
             inst2 = [parser.OFPInstructionActions(
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
