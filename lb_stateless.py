@@ -115,18 +115,20 @@ class loadbalancer(app_manager.RyuApp):
         tcp_header = pkt.get_protocols(tcp.tcp)[0]
         # print("TCP_Header", tcp_header)
 
-        # Route to server
-        match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
-                                ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
-                                tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
-
         if tcp_header.dst_port == 80:
             index = self.i
             server_mac_selected = self.serverlist[index]['mac']
             server_ip_selected = self.serverlist[index]['ip']
             server_outport_selected = int(self.serverlist[index]['outport'])
             print("Server ", index)
-            self.i = random.randint(0, 2)
+            self.i = self.i + 1
+            if self.i == 3:
+                self.i = 0
+
+            # Route to server
+            match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
+                                    ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
+                                    tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
 
             actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
                        parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
