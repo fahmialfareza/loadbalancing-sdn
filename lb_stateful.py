@@ -115,11 +115,6 @@ class loadbalancer(app_manager.RyuApp):
         tcp_header = pkt.get_protocols(tcp.tcp)[0]
         # print("TCP_Header", tcp_header)
 
-        # Route to server
-        match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
-                                ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst,
-                                tcp_src=tcp_header.src_port, tcp_dst=tcp_header.dst_port)
-
         if tcp_header.dst_port == 80:
             index = self.i
             server_mac_selected = self.serverlist[index]['mac']
@@ -130,30 +125,100 @@ class loadbalancer(app_manager.RyuApp):
             if self.i == 3:
                 self.i = 0
 
-            actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                       parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                       parser.OFPActionSetField(eth_dst=server_mac_selected),
+            # Route to server
+            match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
+                                    ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst)
+
+            actions = [parser.OFPActionSetField(eth_dst=server_mac_selected),
                        parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                        parser.OFPActionOutput(server_outport_selected)]
             inst = [parser.OFPInstructionActions(
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
             cookie = random.randint(0, 0xffffffffffffffff)
-            flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=2, instructions=inst,
+            flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=60, instructions=inst,
                                          buffer_id=msg.buffer_id, cookie=cookie)
             datapath.send_msg(flow_mod)
 
             # Reverse route from server
             match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
                                     eth_dst=self.virtual_lb_mac, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
-                                    ipv4_dst=self.virtual_lb_ip, tcp_src=tcp_header.dst_port, tcp_dst=tcp_header.src_port)
+                                    ipv4_dst=self.virtual_lb_ip)
             actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
                        parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                       parser.OFPActionSetField(
-                           ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
                        parser.OFPActionOutput(in_port)]
             inst2 = [parser.OFPInstructionActions(
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
             cookie = random.randint(0, 0xffffffffffffffff)
             flow_mod2 = parser.OFPFlowMod(
-                datapath=datapath, match=match, idle_timeout=2, instructions=inst2, cookie=cookie)
+                datapath=datapath, match=match, idle_timeout=60, instructions=inst2, cookie=cookie)
             datapath.send_msg(flow_mod2)
+
+# Method untuk melakukan monitoring flow table setiap x detik
+@set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
+def _state_change_handler(self, ev):
+    datapath = ev.datapath
+    if ev.state == MAIN_DISPATCHER:
+        if datapath.id not in self.datapaths:
+            self.logger.debug('register datapath: %016x', datapath.id)
+            self.datapaths[datapath.id] = datapath
+    elif ev.state == DEAD_DISPATCHER:
+        if datapath.id in self.datapaths:
+            self.logger.debug('unregister datapath: %016x', datapath.id)
+            del self.datapaths[datapath.id]
+
+
+def _monitor(self):
+    while True:
+        for dp in self.datapaths.values():
+            self._request_stats(dp)
+        hub.sleep(5)
+
+
+def _request_stats(self, datapath):
+    self.logger.debug('send stats request: %016x', datapath.id)
+    ofproto = datapath.ofproto
+    parser = datapath.ofproto_parser
+
+    req = parser.OFPFlowStatsRequest(datapath)
+    datapath.send_msg(req)
+
+    req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)
+    datapath.send_msg(req)
+
+
+@set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
+def _flow_stats_reply_handler(self, ev):
+    body = ev.msg.body
+    ctemp_idx = 0
+
+    self.flow_monitor = len(body)
+    print("Flow Entry saat ini : " + str(self.flow_monitor))
+    self.logger.info('  Cookie     '
+                     '       Duration        '
+                     ' Packets     Bytes')
+    self.logger.info('---------------- '
+                     '----------------- '
+                     '----------  ----------')
+
+    flow_table = ev.msg.to_jsondict()
+    for i in range(self.flow_monitor):
+        # print(i)
+        cookie = (flow_table["OFPFlowStatsReply"]
+                  ["body"][i]["OFPFlowStats"]["cookie"])
+        duration = (flow_table["OFPFlowStatsReply"]
+                    ["body"][i]["OFPFlowStats"]["duration_sec"])
+        packet_count = (flow_table["OFPFlowStatsReply"]
+                        ["body"][i]["OFPFlowStats"]["packet_count"])
+        byte_count = (flow_table["OFPFlowStatsReply"]
+                      ["body"][i]["OFPFlowStats"]["byte_count"])
+        print('{:016x} {:8d} {:15d} {:12d}'.format(
+            cookie, duration, packet_count, byte_count))
+
+        # print("longest duration : " + str(longest_duration))
+        if not cookie in self.ctemp:
+            self.ctemp.append(cookie)
+            self.dtemp.append(duration)
+            self.ptemp.append(packet_count)
+            self.btemp.append(byte_count)
+            print('{:016x} {:8d} {:15d} {:12d}'.format(
+                cookie, duration, packet_count, byte_count))
