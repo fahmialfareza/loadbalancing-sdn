@@ -3,7 +3,7 @@ import time
 import json
 import csv
 
-res = open("result/utilization.csv", "wb")
+res = open("result/controller_utilization.csv", "wb")
 writer = csv.writer(res, delimiter=',')
 
 while True:

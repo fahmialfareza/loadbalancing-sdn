@@ -5,7 +5,6 @@ from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3, ether
 from ryu.lib.packet import packet, ethernet, ether_types, arp, tcp, ipv4
-from ryu.controller.handler import DEAD_DISPATCHER
 
 
 # from ryu.app.sdnhub_apps import learning_switch
