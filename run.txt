@@ -1,23 +1,37 @@
 Stateless
 $ sudo mn -c
 $ ryu-manager ~/loadbalancing/lb_stateless.py
-$ sudo mn --topo single,4 --mac --controller=remote --switch ovs,protocols=OpenFlow13
-mininet > xterm h1 h2 h3 h4 c0 s1
+$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ watch "ovs-ofctl -O OpenFlow13 dump-flows br0"
+$ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows br0"
+mininet > xterm h1 h2 h3 h4 h5 h6 c0 s1
+h1# python -m SimpleHTTPServer 80
+h1# python ~/loadbalancing/utilization/server1_utilization.py
 h2# python -m SimpleHTTPServer 80
+h2# python ~/loadbalancing/utilization/server2_utilization.py
 h3# python -m SimpleHTTPServer 80
-h4# python -m SimpleHTTPServer 80
-c0# python ~/loadbalancing/utilization.py
-s1# python ~/loadbalancing/utilization.py
-h1# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h3# python ~/loadbalancing/utilization/server3_utilization.py
+c0# python ~/loadbalancing/controller_utilization.py
+s1# python ~/loadbalancing/switch_utilization.py
+h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
 
 Stateful
 $ sudo mn -c
 $ ryu-manager ~/loadbalancing/lb_stateful.py
-$ sudo mn --topo single,4 --mac --controller=remote --switch ovs,protocols=OpenFlow13
-mininet > xterm h1 h2 h3 h4 c0 s1
+$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ watch "ovs-ofctl -O OpenFlow13 dump-flows br0"
+$ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows br0"
+mininet > xterm h1 h2 h3 h4 h5 h6 c0 s1
+h1# python -m SimpleHTTPServer 80
+h1# python ~/loadbalancing/utilization/server1_utilization.py
 h2# python -m SimpleHTTPServer 80
+h2# python ~/loadbalancing/utilization/server2_utilization.py
 h3# python -m SimpleHTTPServer 80
-h4# python -m SimpleHTTPServer 80
-c0# python ~/loadbalancing/utilization.py
-s1# python ~/loadbalancing/utilization.py
-h1# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h3# python ~/loadbalancing/utilization/server3_utilization.py
+c0# python ~/loadbalancing/controller_utilization.py
+s1# python ~/loadbalancing/switch_utilization.py
+h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
