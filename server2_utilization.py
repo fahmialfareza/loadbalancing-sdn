@@ -3,7 +3,7 @@ import time
 import json
 import csv
 
-res = open("result/server2_utilization.csv", "wb")
+res = open("loadbalancing/result/server2_utilization.csv", "wb")
 writer = csv.writer(res, delimiter=',')
 
 while True:
