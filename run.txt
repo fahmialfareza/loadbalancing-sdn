@@ -1,10 +1,17 @@
 Stateless
+-- Terminal 1 --
 $ sudo mn -c
+-- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateless.py
+-- Terminal 1 --
 $ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+-- Terminal 3 --
 $ watch "ovs-ofctl -O OpenFlow13 dump-flows br0"
+-- Terminal 4 --
 $ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows br0"
+-- Mininet --
 mininet > xterm h1 h2 h3 h4 h5 h6 c0 s1
+-- Xterm --
 h1# python -m SimpleHTTPServer 80
 h1# python ~/loadbalancing/utilization/server1_utilization.py
 h2# python -m SimpleHTTPServer 80
@@ -13,17 +20,25 @@ h3# python -m SimpleHTTPServer 80
 h3# python ~/loadbalancing/utilization/server3_utilization.py
 c0# python ~/loadbalancing/controller_utilization.py
 s1# python ~/loadbalancing/switch_utilization.py
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
+h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
+h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
+h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
+
 
 Stateful
+-- Terminal 1 --
 $ sudo mn -c
+-- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateful.py
+-- Terminal 1 --
 $ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+-- Terminal 3 --
 $ watch "ovs-ofctl -O OpenFlow13 dump-flows br0"
+-- Terminal 4 --
 $ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows br0"
+-- Mininet --
 mininet > xterm h1 h2 h3 h4 h5 h6 c0 s1
+-- Xterm --
 h1# python -m SimpleHTTPServer 80
 h1# python ~/loadbalancing/utilization/server1_utilization.py
 h2# python -m SimpleHTTPServer 80
