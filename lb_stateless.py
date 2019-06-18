@@ -24,11 +24,11 @@ class loadbalancer(app_manager.RyuApp):
 
         # Appending all given IP's, assumed MAC's and ports of switch to which servers are connected to the list created
         self.serverlist.append(
+            {'ip': "10.0.0.1", 'mac': "00:00:00:00:00:01", "outport": "1"})
+        self.serverlist.append(
             {'ip': "10.0.0.2", 'mac': "00:00:00:00:00:02", "outport": "2"})
         self.serverlist.append(
             {'ip': "10.0.0.3", 'mac': "00:00:00:00:00:03", "outport": "3"})
-        self.serverlist.append(
-            {'ip': "10.0.0.4", 'mac': "00:00:00:00:00:04", "outport": "4"})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
