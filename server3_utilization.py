@@ -3,7 +3,7 @@ import time
 import json
 import csv
 
-res = open("result/switch_utilization.csv", "wb")
+res = open("result/server3_utilization.csv", "wb")
 writer = csv.writer(res, delimiter=',')
 
 while True:
@@ -14,4 +14,4 @@ while True:
     line = [cpu, mem]
     print line
     writer.writerow(line)
-    time.sleep(2)
+    time.sleep(1)
