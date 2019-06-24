@@ -4,34 +4,23 @@ $ sudo mn -c
 -- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateless.py
 -- Terminal 1 --
-$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ sudo mn --topo single,7 --mac --controller=remote --switch ovs,protocols=OpenFlow13
 -- Terminal 3 --
-$ watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
--- Terminal 4 --
-$ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
+$ sudo watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
 -- Mininet --
-mininet > xterm h1 h2 h3 h4 h5 h6 c0
+mininet > xterm h1 h2 h3 h4 h5 h6 s1
 -- Xterm --
+~~ Server h1, h2, dan h3 ~~
 h1# python -m SimpleHTTPServer 80
 h2# python -m SimpleHTTPServer 80
 h3# python -m SimpleHTTPServer 80
-c0# python ~/loadbalancing/utilization.py
+~~ Monitoring table ~~
+s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
 ~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-~~ Pengujian dengan request client yang berbeda ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
+h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h7# httperf --server=10.0.0.100 --url=/ --num-conns=100 --rate=10
 
 
 
@@ -41,31 +30,20 @@ $ sudo mn -c
 -- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateful.py
 -- Terminal 1 --
-$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ sudo mn --topo single,7 --mac --controller=remote --switch ovs,protocols=OpenFlow13
 -- Terminal 3 --
 $ watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
--- Terminal 4 --
-$ watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
 -- Mininet --
-mininet > xterm h1 h2 h3 h4 h5 h6 c0
+mininet > xterm h1 h2 h3 h4 h5 h6 s1
 -- Xterm --
+~~ Server h1, h2, dan h3 ~~
 h1# python -m SimpleHTTPServer 80
 h2# python -m SimpleHTTPServer 80
 h3# python -m SimpleHTTPServer 80
-c0# python ~/loadbalancing/utilization.py
+~~ Monitoring table ~~
+s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
 ~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-~~ Pengujian 10 request/sec ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
-~~ Pengujian dengan request client yang berbeda ~~
-h4# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=10
-h5# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=20
-h6# httperf --server=10.0.0.100 --uri=/ --num-conns=400 --rate=50
+h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=10
+h7# httperf --server=10.0.0.100 --url=/ --num-conns=100 --rate=10
