@@ -164,5 +164,5 @@ class loadbalancer(app_manager.RyuApp):
             # datapath.send_msg(flow_mod2)
 
             data = None
-            out2 = parser.OFPPacketOut(datapath=datapath, actions=actions)
+            out2 = parser.OFPPacketOut(datapath=datapath, in_port=server_outport_selected, actions=actions)
             datapath.send_msg(out2)
