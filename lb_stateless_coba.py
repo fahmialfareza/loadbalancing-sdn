@@ -145,7 +145,7 @@ class loadbalancer(app_manager.RyuApp):
             data = None
             if msg.buffer_id == ofproto.OFP_NO_BUFFER:
                 data = msg.data
-                
+
             out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
                                   in_port=in_port, actions=actions, data=data)
             datapath.send_msg(out)
@@ -166,6 +166,9 @@ class loadbalancer(app_manager.RyuApp):
             #     datapath=datapath, match=match, idle_timeout=1, instructions=inst2, cookie=cookie)
             # datapath.send_msg(flow_mod2)
 
-            data = None
-            out2 = parser.OFPPacketOut(datapath=datapath, in_port=server_outport_selected, actions=actions)
+            data2 = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data2 = msg.data
+            out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                  in_port=server_outport_selected, actions=actions, data=data2)
             datapath.send_msg(out2)
