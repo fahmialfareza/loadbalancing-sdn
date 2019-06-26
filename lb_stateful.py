@@ -6,9 +6,7 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3, ether
 from ryu.lib.packet import packet, ethernet, ether_types, arp, tcp, ipv4
 
-
 # from ryu.app.sdnhub_apps import learning_switch
-
 
 class loadbalancer(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
