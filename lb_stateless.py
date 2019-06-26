@@ -93,6 +93,13 @@ class loadbalancer(app_manager.RyuApp):
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
 
+        dst = eth.dst
+        src = eth.src
+
+        self.mac_to_port.setdefault(dpid, {})
+
+        self.mac_to_port[dpid][src] = in_port
+
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
