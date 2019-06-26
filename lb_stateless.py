@@ -92,7 +92,7 @@ class loadbalancer(app_manager.RyuApp):
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
-        
+
         dst = eth.dst
         src = eth.src
 
