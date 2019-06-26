@@ -93,9 +93,17 @@ class loadbalancer(app_manager.RyuApp):
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
 
+        dst = eth.dst
+        src = eth.src
+
+        self.mac_to_port.setdefault(dpid, {})
+
+        self.mac_to_port[dpid][src] = in_port
+
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
+
         # Jika ethernet frame type = 2054 mengindikasikan ARP packet..
         if eth.ethertype == ether.ETH_TYPE_ARP:
             arp_header = pkt.get_protocols(arp.arp)[0]
@@ -108,8 +116,42 @@ class loadbalancer(app_manager.RyuApp):
                 packet_out = parser.OFPPacketOut(datapath=datapath, in_port=ofproto.OFPP_ANY, data=reply_packet.data,
                                                  actions=actions, buffer_id=0xffffffff)
                 datapath.send_msg(packet_out)
+                return
+            else:
+                self.mac_to_port.setdefault(dpid, {})
 
-            return
+                # self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+
+                # learn a mac address to avoid FLOOD next time.
+                self.mac_to_port[dpid][src] = in_port
+
+                if dst in self.mac_to_port[dpid]:
+                    out_port = self.mac_to_port[dpid][dst]
+                else:
+                    out_port = ofproto.OFPP_FLOOD
+
+                actions = [parser.OFPActionOutput(out_port)]
+
+                # install a flow to avoid packet_in next time
+                if out_port != ofproto.OFPP_FLOOD:
+                    match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+                    # verify if we have a valid buffer_id, if yes avoid to send both
+                    # # flow_mod & packet_out
+                    if msg.buffer_id != ofproto.OFP_NO_BUFFER:
+                        self.add_flow(datapath, 1, match,
+                                      actions, msg.buffer_id)
+                        return
+                    else:
+                        self.add_flow(datapath, 1, match, actions)
+                data = None
+                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                    data = msg.data
+
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=actions, data=data)
+                datapath.send_msg(out)
+                return
+
         ip_header = pkt.get_protocols(ipv4.ipv4)[0]
         # print("IP_Header", ip_header)
         tcp_header = pkt.get_protocols(tcp.tcp)[0]
@@ -129,9 +171,7 @@ class loadbalancer(app_manager.RyuApp):
             match = parser.OFPMatch(in_port=in_port, eth_type=eth.ethertype, eth_src=eth.src, eth_dst=eth.dst,
                                     ip_proto=ip_header.proto, ipv4_src=ip_header.src, ipv4_dst=ip_header.dst)
 
-            actions = [parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                       parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
-                       parser.OFPActionSetField(eth_dst=server_mac_selected),
+            actions = [parser.OFPActionSetField(eth_dst=server_mac_selected),
                        parser.OFPActionSetField(ipv4_dst=server_ip_selected),
                        parser.OFPActionOutput(server_outport_selected)]
             inst = [parser.OFPInstructionActions(
@@ -143,12 +183,10 @@ class loadbalancer(app_manager.RyuApp):
 
             # Reverse route from server
             match = parser.OFPMatch(in_port=server_outport_selected, eth_type=eth.ethertype, eth_src=server_mac_selected,
-                                    eth_dst=self.virtual_lb_mac, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
-                                    ipv4_dst=self.virtual_lb_ip)
+                                    eth_dst=eth.src, ip_proto=ip_header.proto, ipv4_src=server_ip_selected,
+                                    ipv4_dst=ip_header.src)
             actions = [parser.OFPActionSetField(eth_src=self.virtual_lb_mac),
                        parser.OFPActionSetField(ipv4_src=self.virtual_lb_ip),
-                       parser.OFPActionSetField(
-                           ipv4_dst=ip_header.src), parser.OFPActionSetField(eth_dst=eth.src),
                        parser.OFPActionOutput(in_port)]
             inst2 = [parser.OFPInstructionActions(
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
