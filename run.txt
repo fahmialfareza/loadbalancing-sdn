@@ -4,11 +4,11 @@ $ sudo mn -c
 -- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateless.py
 -- Terminal 1 --
-$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ sudo mn --topo single,7 --mac --controller=remote --switch ovs,protocols=OpenFlow13
 -- Terminal 3 --
 $ sudo watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
 -- Mininet --
-mininet > xterm h1 h2 h3 h4 h5 h6 s1
+mininet > xterm h1 h2 h3 h4 h5 h6 h7 s1
 -- Xterm --
 ~~ Server h1, h2, dan h3 ~~
 h1# python -m SimpleHTTPServer 80
@@ -20,6 +20,7 @@ s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
 h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
+h7# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 
 
 
@@ -33,7 +34,7 @@ $ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenF
 -- Terminal 3 --
 $ watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
 -- Mininet --
-mininet > xterm h1 h2 h3 h4 h5 h6 s1
+mininet > xterm h1 h2 h3 h4 h5 h6 h7 s1
 -- Xterm --
 ~~ Server h1, h2, dan h3 ~~
 h1# python -m SimpleHTTPServer 80
@@ -45,3 +46,4 @@ s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
 h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
+h7# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
