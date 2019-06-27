@@ -30,7 +30,7 @@ $ sudo mn -c
 -- Terminal 2 --
 $ ryu-manager ~/loadbalancing/lb_stateful.py
 -- Terminal 1 --
-$ sudo mn --topo single,6 --mac --controller=remote --switch ovs,protocols=OpenFlow13
+$ sudo mn --topo single,7 --mac --controller=remote --switch ovs,protocols=OpenFlow13
 -- Terminal 3 --
 $ watch "ovs-ofctl -O OpenFlow13 dump-flows s1"
 -- Mininet --
