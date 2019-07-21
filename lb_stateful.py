@@ -131,16 +131,19 @@ class loadbalancer(app_manager.RyuApp):
                 actions = [parser.OFPActionOutput(out_port)]
 
                 # install a flow to avoid packet_in next time
-                # if out_port != ofproto.OFPP_FLOOD:
-                #     match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-                #     # verify if we have a valid buffer_id, if yes avoid to send both
-                #     # # flow_mod & packet_out
-                #     if msg.buffer_id != ofproto.OFP_NO_BUFFER:
-                #         self.add_flow(datapath, 1, match,
-                #                       actions, msg.buffer_id)
-                #         return
-                #     else:
-                #         self.add_flow(datapath, 1, match, actions)
+                if out_port != ofproto.OFPP_FLOOD:
+                    match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+                    # verify if we have a valid buffer_id, if yes avoid to send both
+                    # flow_mod & packet_out
+                    instarp = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+                    if msg.buffer_id != ofproto.OFP_NO_BUFFER:
+                        mod = parser.OFPFlowMod(datapath=datapath, buffer_id=msg.buffer_id,
+                                                priority=1, match=match, idle_timeout=2,
+                                                instructions=instarp)
+                    else:
+                        mod = parser.OFPFlowMod(datapath=datapath, priority=1,
+                                                match=match, idle_timeout=2, instructions=instarp)
+                    datapath.send_msg(mod)
                 data = None
                 if msg.buffer_id == ofproto.OFP_NO_BUFFER:
                     data = msg.data
