@@ -175,7 +175,7 @@ class loadbalancer(app_manager.RyuApp):
             inst = [parser.OFPInstructionActions(
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
             cookie = random.randint(0, 0xffffffffffffffff)
-            flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=60, instructions=inst,
+            flow_mod = parser.OFPFlowMod(datapath=datapath, match=match, idle_timeout=0, instructions=inst,
                                          buffer_id=msg.buffer_id, cookie=cookie)
             datapath.send_msg(flow_mod)
 
@@ -190,5 +190,5 @@ class loadbalancer(app_manager.RyuApp):
                 ofproto.OFPIT_APPLY_ACTIONS, actions)]
             cookie = random.randint(0, 0xffffffffffffffff)
             flow_mod2 = parser.OFPFlowMod(
-                datapath=datapath, match=match, idle_timeout=60, instructions=inst2, cookie=cookie)
+                datapath=datapath, match=match, idle_timeout=0, instructions=inst2, cookie=cookie)
             datapath.send_msg(flow_mod2)
