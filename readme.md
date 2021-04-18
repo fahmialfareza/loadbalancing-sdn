@@ -24,7 +24,7 @@ h2# python -m SimpleHTTPServer 80
 h3# python -m SimpleHTTPServer 80
 ~~ Monitoring table ~~
 s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
-~~ Pengujian 10 request/sec ~~
+~~ Test 10 request/sec ~~
 h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
@@ -51,7 +51,7 @@ h2# python -m SimpleHTTPServer 80
 h3# python -m SimpleHTTPServer 80
 ~~ Monitoring table ~~
 s1# watch -n 1 "ovs-ofctl -O OpenFlow13 dump-flows s1 | wc -l"
-~~ Pengujian 10 request/sec ~~
+~~ Test 10 request/sec ~~
 h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
