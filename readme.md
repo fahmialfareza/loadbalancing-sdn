@@ -4,7 +4,9 @@ Project for Thesis "Comparative Analysis of Stateless and Stateful Application i
 
 # How To Run
 
-Stateless
+## Stateless
+
+```bash
 -- Terminal 1 --
 $ sudo mn -c
 -- Terminal 2 --
@@ -27,8 +29,11 @@ h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h7# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
+```
 
-Stateful
+## Stateful
+
+```bash
 -- Terminal 1 --
 $ sudo mn -c
 -- Terminal 2 --
@@ -51,3 +56,4 @@ h4# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h5# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h6# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
 h7# httperf --server=10.0.0.100 --uri=/ --num-conns=100 --rate=20
+```
